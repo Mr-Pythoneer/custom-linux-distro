@@ -73,14 +73,16 @@ Living checklist for the whole distro. Organized by the same structure as `DESIG
 
 ## 7. Creative mode — `modes/creative/`
 
-- [ ] FreeCAD install script
-- [ ] Blender install script
-- [ ] DaVinci Resolve install script (official native Linux build — check current download/license flow, Nvidia driver dependency)
-- [ ] Kdenlive install script (lighter native alternative)
-- [ ] ffmpeg build/verify with NVENC/NVDEC support
+- [x] FreeCAD install script (Flatpak, handles the org.freecad/org.freecadweb ID rebrand uncertainty)
+- [x] Blender install script (Flatpak)
+- [x] DaVinci Resolve install script (wraps BMD's official .run installer — download itself can't be automated, requires manual registration on BMD's site)
+- [x] Kdenlive install script (Flatpak)
+- [x] ffmpeg with NVENC/NVDEC (checks system ffmpeg first, falls back to BtbN's prebuilt static build)
+- [x] verify-creative.sh sanity check
+- [x] Explicit "not supported" doc: SolidWorks/AutoCAD/Premiere/After Effects under Wine — don't attempt, point to Resolve/FreeCAD instead (see modes/creative/README.md)
 - [ ] Scratch-disk/cache path defaults pointed at fastest local NVMe
-- [ ] Explicit "not supported" doc: SolidWorks/AutoCAD/Premiere/After Effects under Wine — don't attempt, point to Resolve/FreeCAD instead
 - [ ] Color-managed display profile loading — **(needs live desktop + real monitor)**
+- [ ] **(needs hardware)** verify NVENC actually works, Resolve actually launches with a real Nvidia GPU
 
 ## 8. Normal mode — `modes/normal/`
 
