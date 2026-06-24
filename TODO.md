@@ -86,9 +86,13 @@ Living checklist for the whole distro. Organized by the same structure as `DESIG
 
 ## 8. Normal mode — `modes/normal/`
 
-- [ ] GNOME extension install script (Dash to Dock, top-bar tweaks) — **(needs live desktop)**
-- [ ] WhiteSur (or similar) macOS-style theme install — **(needs live desktop)**
-- [ ] dconf profile capturing the dock/top-bar/Mission-Control-style layout — **(needs live desktop)**
+- [x] WhiteSur GTK/icon/shell theme install script (vinceliuice's own install.sh, user-local)
+- [x] Dock repositioning to bottom/floating/autohide (uses Ubuntu's built-in dash-to-dock-based dock, no new extension needed)
+- [x] Theme application script (GTK/icon theme + GNOME's official User Themes extension)
+- [x] Removed the dead `DE_DCONF_FILE` stub field from all modectl profiles once real implementation landed elsewhere
+- [ ] macOS-style global app-menu / Mission-Control-equivalent overview — explicitly not attempted, see `modes/normal/README.md` (no stable GNOME built-in equivalent; needs live-session iteration to pick a real extension)
+- [ ] **(needs live desktop)** verify theme/dock changes actually render correctly
+- [ ] **(needs live desktop)** confirm the WhiteSur theme name `install.sh` actually produces matches what `03-apply-theme.sh` assumes (`WhiteSur-Dark`)
 - [ ] Balanced power defaults verification
 
 ## 9. Build pipeline — `iso/`

@@ -11,14 +11,13 @@
 #     (STOP_AI_PRESET=true), or starts one if entering AI mode (AI_AUTOSTART_PRESET)
 #   - asks for explicit confirmation before disabling a display manager
 #     (CONFIRM_DISPLAY_MANAGER_STOP=true) since that can kill an active desktop session
-#
 #   - pinning PINNED_APPS to the GNOME favorite-apps dock (best-effort,
 #     GNOME-specific, desktop-file IDs unverified — see profiles/*.conf)
 #
-# What this script does NOT do yet (see README.md TODOs — these need a real
-# desktop session to build/verify against, not just a remote shell):
-#   - DE/shell switching for Normal mode's macOS-style dock/top-bar
-#   - color profile loading for Creative mode
+# What this script deliberately does NOT do (see README.md for why):
+#   - Normal mode's theme/dock-position/icon setup — that's a ONE-TIME job,
+#     see modes/normal/setup/*.sh, not something to re-apply on every switch
+#   - color profile loading for Creative mode (monitor-specific)
 #   - GPU performance-state pinning beyond the power-profiles-daemon profile
 #
 # Usage:
