@@ -102,7 +102,10 @@ Living checklist for the whole distro. Organized by the same structure as `DESIG
 - [ ] **(needs Linux build host — live-build doesn't run on macOS at all)** actually run `./build.sh` for the first time
 - [ ] First buildable ISO (boots in a VM, even before all modes are polished) — **(needs Linux build host)**
 - [ ] Decide whether to invest in `config/archives/` to bake Docker/Steam/etc. in at build time, once verified against a real host
-- [ ] Calamares installer config + branding
+- [x] Calamares installer config skeleton (`iso/calamares/`: settings, welcome, users, partition modules + branding descriptor) — YAML-validated, but unverified against a real Calamares run; `partition.conf` flagged as lowest confidence
+- [ ] Brand assets (logo.png, welcome.png, show.qml slideshow) — not created, need a real name/logo first, and a renderer to check the QML slideshow actually displays correctly
+- [ ] Wire Calamares config + package into `iso/build.sh`/`includes.chroot` (deliberately not done yet — installer polish is last per DESIGN.md §7's build order)
+- [ ] **(needs Linux host)** install Calamares package, drop this config in, run an actual install end to end
 - [ ] CI: automated nightly/release ISO builds (GitHub Actions)
 
 ## 10. CI / quality
