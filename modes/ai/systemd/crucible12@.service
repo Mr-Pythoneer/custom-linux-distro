@@ -1,0 +1,18 @@
+[Unit]
+Description=Crucible12 llama-server (%i preset)
+After=network.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/crucible12/setup
+ExecStart=/opt/crucible12/setup/run-%i.sh
+Restart=on-failure
+RestartSec=5
+User=crucible12
+Group=crucible12
+
+# GPU/RAM headroom reservation while a preset is active is the mode-switcher's
+# job (cgroup/slice priority via distro-modectl), not this unit — see DESIGN.md §5/§4.
+
+[Install]
+WantedBy=multi-user.target

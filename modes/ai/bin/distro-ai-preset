@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+#
+# Switches the active Crucible12 preset. This is AI mode's control surface:
+# stops whichever preset is currently running, starts the requested one as a
+# systemd unit instance, and reminds the user which OpenCode config to copy.
+#
+# Usage:
+#   distro-ai-preset switch <crucible|max|fast|reasoning>
+#   distro-ai-preset status
+#   distro-ai-preset stop
+
+set -euo pipefail
+
+PRESETS=(crucible max fast reasoning)
+CRUCIBLE_DIR="/opt/crucible12"
+
+usage() {
+    echo "Usage: $(basename "$0") switch <${PRESETS[*]// /|}> | status | stop" >&2
+    exit 1
+}
+
+running_preset() {
+    for p in "${PRESETS[@]}"; do
+        systemctl is-active --quiet "crucible12@${p}.service" && echo "$p" && return 0
+    done
+    return 1
+}
+
+case "${1:-}" in
+    switch)
+        target="${2:-}"
+        [[ " ${PRESETS[*]} " == *" $target "* ]] || usage
+
+        if current=$(running_preset); then
+            if [ "$current" = "$target" ]; then
+                echo "Preset '$target' is already running."
+                exit 0
+            fi
+            echo "Stopping current preset: $current"
+            sudo systemctl stop "crucible12@${current}.service"
+        fi
+
+        echo "Starting preset: $target"
+        sudo systemctl start "crucible12@${target}.service"
+        sleep 1
+        systemctl is-active --quiet "crucible12@${target}.service" || {
+            echo "Failed to start crucible12@${target}.service — check: journalctl -u crucible12@${target}.service" >&2
+            exit 1
+        }
+
+        echo "Now running: $target"
+        echo "Copy the matching OpenCode config into your project:"
+        echo "  cp $CRUCIBLE_DIR/config/opencode.${target}.json ./opencode.json"
+        ;;
+    status)
+        if current=$(running_preset); then
+            echo "Active preset: $current"
+            systemctl status "crucible12@${current}.service" --no-pager
+        else
+            echo "No preset currently running."
+        fi
+        ;;
+    stop)
+        if current=$(running_preset); then
+            echo "Stopping preset: $current"
+            sudo systemctl stop "crucible12@${current}.service"
+        else
+            echo "No preset currently running."
+        fi
+        ;;
+    *) usage ;;
+esac
