@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+#
+# Nautilus (GNOME Files) script: "ask AI about this file" context-menu
+# action, per DESIGN.md §5. This is NOT installed as a literal context-menu
+# entry by editing some config -- Nautilus's real, long-documented mechanism
+# is "scripts": any executable file dropped into
+# ~/.local/share/nautilus/scripts/ automatically appears under the right-click
+# Scripts submenu, and Nautilus passes selected file(s) to it via the
+# NAUTILUS_SCRIPT_SELECTED_FILE_PATHS environment variable (newline-separated
+# absolute paths). install.sh in this same directory copies this file there
+# and chmods it -- that's the entire "wiring" step, there's no separate
+# registration file.
+#
+# Reads only the first 4000 bytes of the file as context (avoids sending huge
+# payloads / binary files wholesale to the model) and asks distro-ai-ask to
+# summarize/describe it. Needs a live Nautilus session to verify the menu
+# entry actually appears -- the file-reading/prompt-building logic itself is
+# plain bash and has been execution-tested against a fake selected-file path.
+
+set -euo pipefail
+
+BIN_DIR="/opt/crucible12/bin"
+MAX_BYTES=4000
+
+if ! command -v zenity >/dev/null 2>&1; then
+    echo "nautilus-ask-ai: zenity is required but not found (apt install zenity)" >&2
+    exit 1
+fi
+
+if [ -z "${NAUTILUS_SCRIPT_SELECTED_FILE_PATHS:-}" ]; then
+    zenity --error --title="Ask AI about this file" \
+        --text="No file selected." --width=360 2>/dev/null
+    exit 1
+fi
+
+# Nautilus separates multiple selected paths with newlines; only handle the
+# first one -- asking about a multi-file selection at once is a different
+# feature, not silently approximated here.
+file_path="$(head -n1 <<< "$NAUTILUS_SCRIPT_SELECTED_FILE_PATHS")"
+
+if [ ! -f "$file_path" ]; then
+    zenity --error --title="Ask AI about this file" \
+        --text="Not a regular file: $file_path" --width=360 2>/dev/null
+    exit 1
+fi
+
+excerpt="$(head -c "$MAX_BYTES" "$file_path" 2>/dev/null || true)"
+filename="$(basename "$file_path")"
+
+prompt="The user right-clicked the file \"$filename\" and asked about it. Here are up to the first $MAX_BYTES bytes of its contents:
+
+---
+$excerpt
+---
+
+Describe what this file is and what it's likely for, in a few sentences."
+
+if ! reply="$("$BIN_DIR/distro-ai-ask" "$prompt" 2>&1)"; then
+    zenity --error --title="Ask AI about this file" --text="$reply" --width=480 2>/dev/null
+    exit 1
+fi
+
+zenity --text-info \
+    --title="Ask AI about: $filename" \
+    --width=600 --height=400 \
+    --filename=<(printf '%s' "$reply") 2>/dev/null

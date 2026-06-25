@@ -29,6 +29,11 @@ sudo systemctl daemon-reload
 sudo cp bin/distro-ai-preset /usr/local/bin/
 sudo chmod +x /usr/local/bin/distro-ai-preset
 
+sudo cp bin/distro-ai-ask bin/distro-ai-overlay bin/distro-ai-bind-hotkey /usr/local/bin/
+sudo chmod +x /usr/local/bin/distro-ai-ask /usr/local/bin/distro-ai-overlay /usr/local/bin/distro-ai-bind-hotkey
+distro-ai-bind-hotkey                       # binds <Super>space, run as the desktop user (not sudo)
+/opt/crucible12/integrations/install.sh     # installs the Nautilus "ask AI about this file" script
+
 distro-ai-preset switch crucible
 distro-ai-preset status
 ```
@@ -38,6 +43,37 @@ Then, per-project:
 cp /opt/crucible12/config/opencode.crucible.json ./opencode.json
 opencode
 ```
+
+## Hotkey overlay + file-manager integration
+
+Both are thin clients on top of whatever preset is already running on
+`localhost:8080` — `bin/distro-ai-ask` is the shared backend (one `curl`
+call, OpenAI-compatible chat-completions shape), execution-tested against a
+stub server covering the happy path, empty-prompt rejection, unreachable-server,
+and malformed-response-shape cases.
+
+- `bin/distro-ai-overlay` — `zenity`-based prompt/reply dialog, meant to be
+  bound to a global keyboard shortcut. `bin/distro-ai-bind-hotkey [binding]`
+  wires it to `<Super>space` by default via the documented GNOME
+  `org.gnome.settings-daemon.plugins.media-keys` custom-keybinding
+  relocatable-schema mechanism — same best-effort-but-undocumented-on-real-hardware
+  caveat as `modes/modectl`'s `PINNED_APPS` dock pinning. Run it as the
+  desktop user in their session, not via sudo.
+- `integrations/nautilus-ask-ai` + `integrations/install.sh` — a real
+  Nautilus (GNOME Files) "Scripts" entry, not a fabricated context-menu
+  config. Nautilus's actual mechanism: any executable dropped into
+  `~/.local/share/nautilus/scripts/` shows up under right-click → Scripts
+  automatically, with the selected file's path passed via
+  `NAUTILUS_SCRIPT_SELECTED_FILE_PATHS`. Reads the first 4KB of the selected
+  file, asks the local model to describe it. `install.sh` does the one-line
+  copy-and-chmod into place.
+
+Both **need a live GNOME session to verify the dialogs/menu entry actually
+render** — that part is unverified, consistent with every other live-desktop
+caveat in this repo. The request/response plumbing itself (`distro-ai-ask`,
+and `nautilus-ask-ai`'s file-reading/error-handling control flow) has been
+execution-tested with bash 5 against a stub HTTP server and a stubbed
+`zenity`, not just syntax-checked.
 
 ## Optional cloud fallback (explicit opt-in only)
 

@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+#
+# Best-effort wiring of distro-ai-overlay to a GNOME custom keybinding
+# (default: Super+Space) using the documented gsettings relocatable-schema
+# mechanism for org.gnome.settings-daemon.plugins.media-keys custom
+# keybindings. Same honesty pattern as modes/modectl's PINNED_APPS dock
+# pinning: the gsettings keys/paths here are the long-stable, documented
+# GNOME mechanism, but this has not been run against a real GNOME session
+# from this Mac, so treat it as best-effort and verify on a live desktop.
+#
+# Must be run as the desktop user in a session with a working session bus
+# (same constraint as gsettings always has) -- not via sudo, not headless.
+#
+# Usage: distro-ai-bind-hotkey [binding]   (default binding: <Super>space)
+
+set -euo pipefail
+
+BINDING="${1:-<Super>space}"
+SCHEMA_DIR="org.gnome.settings-daemon.plugins.media-keys"
+PATH_BASE="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
+SLOT_NAME="crucible-ai-overlay"
+SLOT_PATH="$PATH_BASE/$SLOT_NAME/"
+
+if ! command -v gsettings >/dev/null 2>&1; then
+    echo "distro-ai-bind-hotkey: gsettings not found -- not a GNOME session?" >&2
+    exit 1
+fi
+
+if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ] && [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
+    echo "distro-ai-bind-hotkey: no session bus/display detected -- run this as the logged-in" >&2
+    echo "desktop user inside their session, not via sudo or a headless shell." >&2
+    exit 1
+fi
+
+existing="$(gsettings get "$SCHEMA_DIR" custom-keybindings 2>/dev/null || echo "[]")"
+
+if [[ "$existing" != *"$SLOT_NAME"* ]]; then
+    if [ "$existing" = "@as []" ] || [ "$existing" = "[]" ]; then
+        new_list="['$SLOT_PATH']"
+    else
+        new_list="${existing%]}, '$SLOT_PATH']"
+    fi
+    gsettings set "$SCHEMA_DIR" custom-keybindings "$new_list"
+fi
+
+gsettings set "$SCHEMA_DIR.custom-keybinding:$SLOT_PATH" name "Crucible OS — Ask AI"
+gsettings set "$SCHEMA_DIR.custom-keybinding:$SLOT_PATH" command "distro-ai-overlay"
+gsettings set "$SCHEMA_DIR.custom-keybinding:$SLOT_PATH" binding "$BINDING"
+
+echo "Bound $BINDING to distro-ai-overlay (GNOME custom keybinding '$SLOT_NAME')."
+echo "If the shortcut doesn't appear in Settings > Keyboard > Shortcuts, or doesn't"
+echo "fire, this gsettings relocatable-schema wiring needs to be re-verified on a"
+echo "real GNOME session -- it has not been run against one yet."

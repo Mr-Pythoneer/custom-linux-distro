@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+#
+# Shared backend for the hotkey overlay and the Nautilus "ask AI about this
+# file" action (modes/ai/integrations/nautilus-ask-ai). Both are thin clients
+# on top of whatever Crucible12 preset is already running -- per DESIGN.md
+# §5 this just does an OpenAI-compatible HTTP call to localhost:8080, no new
+# inference logic.
+#
+# Usage:
+#   distro-ai-ask "<prompt text>"
+#   echo "<prompt text>" | distro-ai-ask
+#
+# Reads the prompt from $1 if given, otherwise from stdin. Prints the model's
+# reply to stdout. Exits non-zero (with a message on stderr) if no preset is
+# reachable on localhost:8080 -- callers (overlay/Nautilus script) are
+# expected to surface that to the user rather than failing silently.
+
+set -euo pipefail
+
+ENDPOINT="http://127.0.0.1:8080/v1/chat/completions"
+
+if [ -n "${1:-}" ]; then
+    prompt="$1"
+else
+    prompt="$(cat)"
+fi
+
+if [ -z "$prompt" ]; then
+    echo "distro-ai-ask: empty prompt" >&2
+    exit 1
+fi
+
+if ! command -v curl >/dev/null 2>&1; then
+    echo "distro-ai-ask: curl is required but not found" >&2
+    exit 1
+fi
+
+if ! command -v python3 >/dev/null 2>&1; then
+    echo "distro-ai-ask: python3 is required (used for JSON encode/decode) but not found" >&2
+    exit 1
+fi
+
+payload="$(PROMPT="$prompt" python3 -c '
+import json, os
+print(json.dumps({
+    "messages": [{"role": "user", "content": os.environ["PROMPT"]}],
+    "stream": False,
+}))
+')"
+
+response="$(curl -sS --max-time 60 -X POST "$ENDPOINT" \
+    -H "Content-Type: application/json" \
+    -d "$payload" 2>&1)" || {
+    echo "distro-ai-ask: could not reach $ENDPOINT -- is a Crucible12 preset running? (distro-ai-preset status)" >&2
+    echo "$response" >&2
+    exit 1
+}
+
+reply="$(RESPONSE="$response" python3 -c '
+import json, os, sys
+try:
+    data = json.loads(os.environ["RESPONSE"])
+    print(data["choices"][0]["message"]["content"])
+except (json.JSONDecodeError, KeyError, IndexError, TypeError) as e:
+    print(f"distro-ai-ask: unexpected response shape ({e})", file=sys.stderr)
+    print(os.environ["RESPONSE"], file=sys.stderr)
+    sys.exit(1)
+')" || exit 1
+
+printf '%s\n' "$reply"

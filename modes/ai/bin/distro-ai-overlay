@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+#
+# Global-hotkey assistant overlay, per DESIGN.md §5: "a global hotkey
+# assistant overlay (thin client hitting localhost:8080)". Meant to be bound
+# to a keyboard shortcut (see bind-hotkey.sh in this same directory) so a
+# user anywhere on the desktop can pop a prompt box, send it to whichever
+# Crucible12 preset is running, and read the reply -- no terminal needed.
+#
+# Deliberately built on `zenity` (GTK dialog tool, present on every
+# GNOME-based strain via libgtk's standard tooling) instead of a custom GUI
+# app: it's the simplest correct way to get a real input/output dialog
+# without writing and maintaining a GTK app from scratch. Needs a live
+# desktop session to actually display -- can't be visually verified from
+# this Mac, only execution-tested for the curl/parsing logic via
+# distro-ai-ask.
+#
+# Usage: distro-ai-overlay   (no args -- always interactive)
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if ! command -v zenity >/dev/null 2>&1; then
+    echo "distro-ai-overlay: zenity is required but not found (apt install zenity)" >&2
+    exit 1
+fi
+
+prompt="$(zenity --entry \
+    --title="Crucible OS — Ask AI" \
+    --text="Ask the local AI:" \
+    --width=480 2>/dev/null)" || exit 0   # user hit Cancel -- not an error
+
+[ -n "$prompt" ] || exit 0
+
+if ! reply="$("$SCRIPT_DIR/distro-ai-ask" "$prompt" 2>&1)"; then
+    zenity --error --title="Crucible OS — Ask AI" --text="$reply" --width=480 2>/dev/null
+    exit 1
+fi
+
+zenity --text-info \
+    --title="Crucible OS — Ask AI" \
+    --width=600 --height=400 \
+    --filename=<(printf '%s' "$reply") 2>/dev/null

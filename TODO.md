@@ -35,8 +35,8 @@ Living checklist for the whole distro. Organized by the same structure as `DESIG
 - [ ] **(needs hardware)** each preset starts cleanly, GPU utilization confirmed via `benchmark.sh`
 - [ ] **(needs hardware)** systemd unit permissions/ownership under the `crucible12` service user
 - [ ] **(needs hardware)** preset-switch handoff doesn't race on port 8080 / VRAM release
-- [ ] Global hotkey assistant overlay (thin client hitting `localhost:8080`) — **(needs live desktop)**
-- [ ] File-manager "ask AI about this file" context menu action — **(needs live desktop)**
+- [x] Global hotkey assistant overlay (`bin/distro-ai-overlay`, zenity-based, thin client hitting `localhost:8080` via shared `bin/distro-ai-ask`) + best-effort GNOME keybinding wiring (`bin/distro-ai-bind-hotkey`). Request/response plumbing execution-tested against a stub HTTP server (happy path, empty prompt, unreachable server, malformed response shape) — visual rendering still **(needs live desktop)**
+- [x] File-manager "ask AI about this file" context menu action (`integrations/nautilus-ask-ai` + `integrations/install.sh`) — real Nautilus "Scripts" mechanism (`~/.local/share/nautilus/scripts/`, `NAUTILUS_SCRIPT_SELECTED_FILE_PATHS`), not fabricated. Control flow execution-tested with a stubbed `zenity` — menu entry appearing in a real Nautilus session still **(needs live desktop)**
 - [x] Optional Claude-cloud fallback toggle (`distro-ai-cloud-toggle enable|disable|status`) — explicit opt-in, refuses to proceed without the user's own `ANTHROPIC_API_KEY`. Execution-tested all 3 subcommands end to end. The JSON config's env-var interpolation syntax is flagged as an unverified guess (not confirmed against OpenCode's actual schema) — printed as a warning every time `enable` runs, not buried.
 
 ## 4. Mode-switcher (§4) — `modes/modectl/`
