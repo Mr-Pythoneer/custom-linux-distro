@@ -1,0 +1,6 @@
+## Cloud/VM strain: no desktop environment, cloud-init for provisioning.
+## Note this strain's *delivery format* should eventually differ too (a
+## qcow2/raw cloud image, not an installer ISO/Calamares flow) -- not built
+## yet, see TODO.md. This package list alone does not make a real cloud
+## image; it's the package-selection half of that future work.
+cloud-init

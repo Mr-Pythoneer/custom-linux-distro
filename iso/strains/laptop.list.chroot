@@ -1,0 +1,14 @@
+## Laptop strain: same desktop bundle as workstation, plus battery/power
+## management. tlp's power tuning and modes/modectl's CPU-governor switching
+## are complementary, not redundant -- tlp handles fine-grained
+## battery-charge/USB-autosuspend/etc. that distro-modectl's per-mode
+## governor switch doesn't touch.
+ubuntu-desktop-minimal
+flatpak
+gnome-shell-extensions
+gnome-tweaks
+gamemode
+mangohud
+winetricks
+tlp
+tlp-rdw

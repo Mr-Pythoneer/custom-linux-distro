@@ -1,0 +1,13 @@
+## Handheld/tablet strain (Steam-Deck-class x86_64 devices): same package
+## set as workstation for now. Touch-input and gamepad-first UI tuning are
+## runtime/session config concerns (on-screen keyboard, Big Picture-style
+## launcher defaults), not a package-list difference -- not built yet, see
+## TODO.md. This file exists so the strain is selectable today even though
+## its actual differentiation from workstation is still TODO.
+ubuntu-desktop-minimal
+flatpak
+gnome-shell-extensions
+gnome-tweaks
+gamemode
+mangohud
+winetricks

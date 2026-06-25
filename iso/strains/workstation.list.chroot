@@ -1,0 +1,9 @@
+## Workstation strain: full desktop, all 5 modes available, no special
+## hardware-class tuning. The default strain.
+ubuntu-desktop-minimal
+flatpak
+gnome-shell-extensions
+gnome-tweaks
+gamemode
+mangohud
+winetricks

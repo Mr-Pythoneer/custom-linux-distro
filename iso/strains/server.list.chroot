@@ -1,0 +1,7 @@
+## Server/headless strain: no desktop environment package at all.
+## base.list.chroot already covers openssh-server; Docker/Netdata are
+## intentionally left to modes/server/setup/*.sh, not baked in here --
+## same lean-image philosophy as iso/README.md's main scope decision.
+## (No packages of its own right now -- this file exists so build.sh has
+## something to copy in and the strain selection mechanism stays uniform
+## across all 6 strains rather than special-casing "none".)

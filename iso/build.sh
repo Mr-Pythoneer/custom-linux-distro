@@ -9,9 +9,14 @@
 # have already been checked separately with shellcheck). This script has
 # NOT been run yet — see README.md status section.
 #
-# Usage: ./build.sh   (run from this directory: custom-linux-distro/iso/)
+# Usage: ./build.sh [strain]   (run from this directory: crucible-os/iso/)
+#   strain is one of: workstation (default) | laptop | lowspec | server |
+#   handheld | cloud — see iso/strains/*.list.chroot and iso/strains/README.md.
 
 set -euo pipefail
+
+STRAIN="${1:-workstation}"
+VALID_STRAINS=(workstation laptop lowspec server handheld cloud)
 
 if [ "$(uname)" != "Linux" ]; then
     echo "live-build only runs on Linux. Run this on the actual Ubuntu build host, not here." >&2
@@ -23,8 +28,25 @@ if ! command -v lb >/dev/null 2>&1; then
     exit 1
 fi
 
+if [[ ! " ${VALID_STRAINS[*]} " == *" $STRAIN "* ]]; then
+    echo "Unknown strain '$STRAIN'. Valid: ${VALID_STRAINS[*]}" >&2
+    exit 1
+fi
+
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 INCLUDES="$(dirname "${BASH_SOURCE[0]}")/config/includes.chroot"
+PACKAGE_LISTS="$(dirname "${BASH_SOURCE[0]}")/config/package-lists"
+STRAIN_FILE="$REPO_ROOT/iso/strains/${STRAIN}.list.chroot"
+
+echo -e "\033[36mStrain: $STRAIN\033[0m"
+[ -f "$STRAIN_FILE" ] || { echo "Strain manifest not found: $STRAIN_FILE" >&2; exit 1; }
+
+# Only base.list.chroot (universal CLI tools) plus the ONE selected strain's
+# packages go into config/package-lists/ — that directory is what live-build
+# actually reads, so any other strain's packages must NOT be present here at
+# build time, or every strain would get every strain's packages.
+find "$PACKAGE_LISTS" -maxdepth 1 -name "strain-*.list.chroot" -delete
+cp "$STRAIN_FILE" "$PACKAGE_LISTS/strain-${STRAIN}.list.chroot"
 
 echo -e "\033[36mCopying repo scripts into the image (opt/distro/, /usr/local/bin)...\033[0m"
 # Copied fresh from the repo at build time rather than committed as a
@@ -46,10 +68,21 @@ lb config \
     --linux-flavours generic-hwe-24.04 \
     --archive-areas "main restricted universe multiverse" \
     --debian-installer none \
-    --iso-application "Crucible OS" \
+    --iso-application "Crucible OS ($STRAIN)" \
     --iso-volume "CRUCIBLEOS"
+# --iso-volume deliberately does NOT vary by strain: ISO9660 volume labels
+# have an 11-character limit and "CRUCIBLEOS-LOWSPEC" etc. would blow past
+# it. --iso-application has no such constraint and is where the strain
+# name actually shows up (e.g. in a VM's drive label).
 
 echo -e "\033[36mBuilding ISO (this takes a long time and a lot of disk — run on the build host, not a laptop)...\033[0m"
 lb build
 
-echo -e "\033[32mDone — look for live-image-amd64.hybrid.iso in this directory.\033[0m"
+OUT="live-image-amd64.hybrid.iso"
+RENAMED="crucible-os-${STRAIN}.iso"
+if [ -f "$OUT" ]; then
+    mv "$OUT" "$RENAMED"
+    echo -e "\033[32mDone — $RENAMED\033[0m"
+else
+    echo -e "\033[33mlb build finished but $OUT wasn't found — check the build log above.\033[0m" >&2
+fi

@@ -1,8 +1,10 @@
-## Base tools every mode's scripts depend on. Plain main/universe Ubuntu
-## packages only — nothing here needs an extra apt repo, multiverse, or
-## i386 multiarch added at build time (see iso/README.md for why those are
-## deliberately deferred to post-boot setup scripts instead of guessed at
-## here).
+## Universal CLI tools every strain needs, GUI or headless. No desktop
+## environment here on purpose — DE choice (or none, for server/cloud) is
+## a per-strain decision, see iso/strains/*.list.chroot and iso/build.sh's
+## --strain handling. (Previously this file had NO desktop environment
+## package anywhere, which meant the original skeleton would have produced
+## a GUI-less image regardless of strain -- caught and fixed while adding
+## strain selection, see TODO.md.)
 curl
 jq
 git
@@ -11,9 +13,6 @@ cmake
 linux-tools-common
 linux-tools-generic
 power-profiles-daemon
-flatpak
-gnome-shell-extensions
-gnome-tweaks
 mokutil
 ffmpeg
 openssh-server

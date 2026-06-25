@@ -99,11 +99,17 @@ Living checklist for the whole distro. Organized by the same structure as `DESIG
 
 - [x] live-build config skeleton (`build.sh`, package lists, includes.chroot wiring)
 - [x] Scope decision: lean baked image (plain-apt packages only) + post-boot setup scripts for everything needing extra repos/Flatpak/GitHub releases — see `iso/README.md` for why the apt-`archives/` mechanism was deliberately deferred rather than guessed at
-- [ ] **(needs Linux build host — live-build doesn't run on macOS at all)** actually run `./build.sh` for the first time
+- [x] Caught and fixed a real gap while adding strain selection: `base.list.chroot` never included a desktop environment package at all — the original skeleton would have produced a GUI-less image regardless of strain. DE choice moved to per-strain files.
+- [x] 6 hardware strains scaffolded (`iso/strains/`, `iso/build.sh [strain]`): workstation, laptop, lowspec, server, handheld, cloud — see DESIGN.md §5b for the Tier 1/2/3 breakdown (ARM/Apple Silicon/RISC-V and embedded explicitly deferred, not silently dropped)
+- [x] Strain-selection file-copy/cleanup logic actually execution-tested (stubbed `lb`, ran `build.sh lowspec` then `build.sh laptop`, confirmed no cross-contamination between strains) — the one part of `iso/` that's been run for real, not just read and trusted
+- [ ] **(needs Linux build host — live-build doesn't run on macOS at all)** actually run `./build.sh` for the first time, for each strain
 - [ ] First buildable ISO (boots in a VM, even before all modes are polished) — **(needs Linux build host)**
+- [ ] Confirm `lubuntu-desktop`/`ubuntu-desktop-minimal` package names are still current on whatever Ubuntu release is actually targeted
+- [ ] `handheld` strain's actual differentiation (touch/gamepad UI) — currently identical to workstation, scaffolded but not built
+- [ ] `cloud` strain's delivery format — should eventually be a qcow2/raw cloud image + cloud-init, not an installer ISO; currently only the package-selection half exists
 - [ ] Decide whether to invest in `config/archives/` to bake Docker/Steam/etc. in at build time, once verified against a real host
 - [x] Calamares installer config skeleton (`iso/calamares/`: settings, welcome, users, partition modules + branding descriptor) — YAML-validated, but unverified against a real Calamares run; `partition.conf` flagged as lowest confidence
-- [ ] Brand assets (logo.png, welcome.png, show.qml slideshow) — not created, need a real name/logo first, and a renderer to check the QML slideshow actually displays correctly
+- [ ] Brand assets (logo.png, welcome.png, show.qml slideshow) — not created, need a real logo now that the name exists, and a renderer to check the QML slideshow actually displays correctly
 - [ ] Wire Calamares config + package into `iso/build.sh`/`includes.chroot` (deliberately not done yet — installer polish is last per DESIGN.md §7's build order)
 - [ ] **(needs Linux host)** install Calamares package, drop this config in, run an actual install end to end
 - [ ] CI: automated nightly/release ISO builds (GitHub Actions)

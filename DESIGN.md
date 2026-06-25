@@ -107,6 +107,50 @@ This is the part of the project most worth prototyping first — you already hav
 
 ---
 
+## 5b. Hardware strains — build-time profiles, separate from runtime modes
+
+Modes (§4) are a runtime switch on one install. **Strains** are a
+build-time decision: what desktop environment (if any) and what packages
+ship by default, chosen for a class of hardware. Every strain still gets
+all 5 modes — a low-spec machine can still run AI mode, a server strain
+can still (in principle) run Creative mode, the strain just picks a
+sensible starting point rather than gatekeeping what's possible.
+
+This distinction exists because "make a version for every kind of
+computer" isn't one engineering task — it's several different ones at
+wildly different scales:
+
+**Tier 1 — same CPU architecture (x86_64), same build pipeline
+(live-build + Calamares), genuinely just a different package-list
+overlay.** This is what "strain" means here, see `iso/strains/`:
+- `workstation` (default) — full GNOME desktop, no special tuning
+- `laptop` — same desktop + `tlp`/`tlp-rdw` battery management
+- `lowspec` — LXQt (`lubuntu-desktop`) instead of GNOME, skips
+  gamemode/mangohud/winetricks by default (installed on-demand via
+  `modes/gaming/setup/` if actually needed on that hardware)
+- `server` — no DE at all, relies on `modes/server/setup/*.sh` post-boot
+- `handheld` — Steam-Deck-class x86_64 devices; same packages as
+  workstation for now, touch/gamepad-first UI tuning not yet built
+- `cloud` — `cloud-init`, no DE; its delivery format should eventually be
+  a qcow2/raw cloud image rather than an installer ISO — not built, this
+  strain currently only covers the package-selection half
+
+**Tier 2 — different CPU architecture. A categorically separate
+engineering effort, not "one more strain":** ARM64 (Raspberry Pi-class),
+Apple Silicon, RISC-V. Each needs its own kernel config, its own
+bootloader (u-boot, not GRUB), often cross-compilation, and a different
+image format. Apple Silicon specifically would mean depending on the Asahi
+Linux project's out-of-tree kernel work rather than anything live-build
+provides — adopting someone else's multi-year reverse-engineering effort,
+not a package list. Deliberately deferred, not silently dropped.
+
+**Tier 3 — not actually a fit for what Crucible OS is at all:**
+microcontroller-class embedded Linux (Buildroot/Yocto territory — no
+desktop, often no apt, no installer). A fundamentally different kind of
+project than a desktop/server distro with a Calamares installer.
+
+---
+
 ## 6. Build tooling
 
 - **live-build** (Debian/Ubuntu native ISO remaster tool) for the actual ISO pipeline — more scriptable/reproducible than Cubic (which is GUI-driven and better for one-off experiments, not a maintained pipeline)
