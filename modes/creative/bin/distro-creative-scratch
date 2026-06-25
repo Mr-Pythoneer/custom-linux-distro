@@ -1,0 +1,123 @@
+#!/usr/bin/env bash
+#
+# Detects the fastest local writable mount (preferring genuine NVMe over
+# any other non-rotational storage, per DESIGN.md §4: "scratch-disk/cache
+# paths defaulting to the fastest local NVMe") and sets up a scratch
+# directory there for Creative-mode render/cache use.
+#
+# Detection method: `df -lP` (local filesystems only, POSIX output, so
+# network mounts are excluded) gives every mounted filesystem + free space;
+# `lsblk -ndo ROTA,NAME` on each mount's backing device tells us whether
+# it's rotational (HDD, ROTA=1) or not (SSD/NVMe, ROTA=0). Among non-rotational
+# candidates, devices named nvme* are preferred; if none exist, any
+# non-rotational device is used as a documented fallback rather than failing.
+#
+# Usage:
+#   distro-creative-scratch detect          -- print the best path, do nothing else
+#   distro-creative-scratch setup           -- detect + create scratch dir +
+#                                               write /etc/profile.d env var +
+#                                               best-effort Blender preference
+
+set -euo pipefail
+
+SCRATCH_DIRNAME="crucible-creative-scratch"
+PROFILE_D_FILE="/etc/profile.d/crucible-creative-scratch.sh"
+
+detect_best_mount() {
+    if ! command -v df >/dev/null 2>&1 || ! command -v lsblk >/dev/null 2>&1; then
+        echo "distro-creative-scratch: requires df and lsblk" >&2
+        return 1
+    fi
+
+    local best_path="" best_avail=-1 best_is_nvme=0
+
+    while read -r source target avail; do
+        [ "$target" = "/boot" ] || [ "$target" = "/boot/efi" ] && continue
+        case "$source" in
+            /dev/*) ;;
+            *) continue ;;  # skip tmpfs/overlay/etc. df -l should already exclude these, this is a second guard
+        esac
+
+        local rota name
+        rota="$(lsblk -ndo ROTA "$source" 2>/dev/null | head -n1 | tr -d '[:space:]')"
+        name="$(lsblk -ndo NAME "$source" 2>/dev/null | head -n1 | tr -d '[:space:]')"
+        [ "$rota" = "0" ] || continue   # rotational or unknown -- skip, only want SSD/NVMe
+
+        local is_nvme=0
+        case "$name" in
+            nvme*) is_nvme=1 ;;
+        esac
+
+        # Prefer any nvme candidate over any non-nvme candidate, regardless of
+        # free space; within the same tier, prefer more free space.
+        if [ "$is_nvme" -gt "$best_is_nvme" ] || { [ "$is_nvme" -eq "$best_is_nvme" ] && [ "$avail" -gt "$best_avail" ]; }; then
+            best_path="$target"
+            best_avail="$avail"
+            best_is_nvme="$is_nvme"
+        fi
+    done < <(df -lP --output=source,target,avail 2>/dev/null | tail -n +2)
+
+    if [ -z "$best_path" ]; then
+        echo "distro-creative-scratch: no non-rotational local mount found -- falling back to /var/tmp (rotational disk or undetectable storage)" >&2
+        best_path="/var/tmp"
+    elif [ "$best_is_nvme" -eq 0 ]; then
+        echo "distro-creative-scratch: no NVMe device found, using best available non-rotational mount instead ($best_path)" >&2
+    fi
+
+    printf '%s\n' "$best_path"
+}
+
+case "${1:-}" in
+    detect)
+        detect_best_mount
+        ;;
+    setup)
+        best="$(detect_best_mount)"
+        scratch_dir="$best/$SCRATCH_DIRNAME"
+
+        mkdir -p "$scratch_dir"
+        chmod 1777 "$scratch_dir"   # sticky bit, shared scratch space for any user
+
+        cat > "$PROFILE_D_FILE" <<EOF
+# Written by distro-creative-scratch -- Creative mode's render/cache scratch
+# directory, pointed at the fastest local NVMe (or best available non-rotational
+# mount) detected at setup time. Re-run 'distro-creative-scratch setup' after
+# adding/removing storage if this should be re-evaluated.
+export CRUCIBLE_SCRATCH_DIR="$scratch_dir"
+EOF
+        chmod 644 "$PROFILE_D_FILE"
+
+        echo "Scratch directory: $scratch_dir"
+        echo "CRUCIBLE_SCRATCH_DIR exported via $PROFILE_D_FILE (takes effect in new login sessions)"
+
+        if command -v blender >/dev/null 2>&1; then
+            echo "Setting Blender's temporary-files preference to \$CRUCIBLE_SCRATCH_DIR..."
+            if blender --background --python-expr "
+import bpy
+bpy.context.preferences.filepaths.temporary_directory = '$scratch_dir'
+bpy.ops.wm.save_userpref()
+" >/dev/null 2>&1; then
+                echo "Blender preference set."
+            else
+                echo "Blender preference update failed (non-fatal) -- set it manually:" >&2
+                echo "  Edit > Preferences > File Paths > Temporary Files = $scratch_dir" >&2
+            fi
+        else
+            echo "Blender not installed yet -- once it is, set Edit > Preferences > File Paths >"
+            echo "Temporary Files = \$CRUCIBLE_SCRATCH_DIR manually, or re-run this script after installing it."
+        fi
+
+        echo
+        echo "DaVinci Resolve has no scriptable/CLI way to set its cache/working-folder"
+        echo "paths (it's a per-project setting stored in Resolve's project database, GUI-only)"
+        echo "-- not automated here. Set it manually per project:"
+        echo "  Project Settings > General > Working Folders / Cache Files > $scratch_dir"
+        echo
+        echo "ffmpeg has no dedicated scratch-dir setting either; if you want render"
+        echo "intermediates to land on this disk, pass output paths under \$CRUCIBLE_SCRATCH_DIR explicitly."
+        ;;
+    *)
+        echo "Usage: $(basename "$0") detect | setup" >&2
+        exit 1
+        ;;
+esac

@@ -81,7 +81,7 @@ Living checklist for the whole distro. Organized by the same structure as `DESIG
 - [x] ffmpeg with NVENC/NVDEC (checks system ffmpeg first, falls back to BtbN's prebuilt static build)
 - [x] verify-creative.sh sanity check
 - [x] Explicit "not supported" doc: SolidWorks/AutoCAD/Premiere/After Effects under Wine — don't attempt, point to Resolve/FreeCAD instead (see modes/creative/README.md)
-- [ ] Scratch-disk/cache path defaults pointed at fastest local NVMe
+- [x] Scratch-disk/cache path defaults pointed at fastest local NVMe (`bin/distro-creative-scratch detect|setup`) — `df`+`lsblk`-based detection with honest fallback tiers, best-effort Blender preference wiring, Resolve/ffmpeg flagged as not scriptable. Execution-tested with stubbed `df`/`lsblk`/`blender` across all branches.
 - [ ] Color-managed display profile loading — **(needs live desktop + real monitor)**
 - [ ] **(needs hardware)** verify NVENC actually works, Resolve actually launches with a real Nvidia GPU
 
