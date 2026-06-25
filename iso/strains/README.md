@@ -13,7 +13,7 @@ starting point for that class of machine.
 | `lowspec` | LXQt (`lubuntu-desktop`) | Lightest official Ubuntu DE; skips gamemode/mangohud/winetricks by default (added on-demand via `modes/gaming/setup/` if actually needed) |
 | `server` | none | Headless; relies on `modes/server/setup/*.sh` post-boot, same lean-image philosophy as the rest of `iso/` |
 | `handheld` | GNOME | Same package set as `workstation`; real differentiation is `handheld/setup-handheld-ui.sh` — on-screen keyboard, UI text scaling, Steam Big Picture autostart |
-| `cloud` | none | `cloud-init` only. **Delivery format should eventually differ too** (qcow2/raw image + cloud-init, not an installer ISO/Calamares) — not built, this is the package-selection half only |
+| `cloud` | none | `cloud-init` only. Real qcow2 delivery format: `iso/cloud-image/build-cloud-image.sh` (debootstrap + loop-device + grub-install + qemu-img convert), separate from this ISO pipeline entirely — see `iso/cloud-image/README.md` |
 
 ## Usage
 
@@ -38,7 +38,8 @@ gsettings calls, and both the Steam-present and Steam-absent autostart
 branches, all with stubbed `gsettings`/`steam`). `cloud` is still
 scaffolding — its actual differentiation (a cloud-image delivery format
 instead of an ISO) is unbuilt. Don't mistake "this strain exists in the
-list" for "this strain is done."
+list" for "this strain is done." `cloud` now has a real (if unrun) delivery
+pipeline too — see `iso/cloud-image/README.md`.
 
 ## Explicitly out of scope for this repo
 
