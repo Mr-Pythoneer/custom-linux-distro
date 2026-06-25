@@ -37,12 +37,23 @@ and `show.qml` — **all three now exist.**
 
 ## How this plugs into the ISO
 
-Not yet wired into `iso/build.sh` — these configs would need to land under
-`/etc/calamares/` in the image (via `includes.chroot`, same mechanism as
-`modes/`/`drivers/`) and the `calamares` package added to a package list.
-Not done yet because the installer is reasonably the last thing to get
-right per DESIGN.md §7's suggested build order — no point polishing the
-install screen before the base system + modes actually work.
+Wired into `iso/build.sh`: for GUI strains (not `server`/`cloud`, which are
+headless and use cloud-init/preseed instead), this directory is rsynced
+into `includes.chroot/etc/calamares/`, the `calamares` package is added to
+the strain's package list, and a manual-launch desktop entry
+(`install-crucible-os.desktop`) is created.
+
+**Live-session autostart**: a casper-bottom hook
+(`iso/casper-hooks/casper-bottom/25-crucible-install-icon`) drops that
+desktop entry onto the live user's Desktop during boot — the documented
+mechanism real live-build+Calamares distros use, verified against
+[maui-linux/calamares-casper](https://github.com/maui-linux/calamares-casper)'s
+own casper-bottom script rather than guessed. See `iso/casper-hooks/README.md`
+for the full writeup, including the `config/hooks/live/` hook that forces
+`update-initramfs -u` so the dropped-in script actually lands in the live
+initrd. Execution-tested at the `build.sh`-wiring level (stubbed `lb`,
+confirmed the file appears/disappears correctly per strain) — **not yet
+verified against a real live boot.**
 
 ## Status
 

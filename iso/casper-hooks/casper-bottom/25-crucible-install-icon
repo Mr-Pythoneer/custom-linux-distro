@@ -1,0 +1,42 @@
+#!/bin/sh
+#
+# Casper-bottom hook: drops the "Install Crucible OS" launcher onto the live
+# user's Desktop during live boot. This is the same documented mechanism
+# real live-build+Calamares distros use (verified against
+# maui-linux/calamares-casper's casper-bottom/25calamares script, fetched
+# and read directly rather than guessed) -- casper-bottom scripts under
+# /usr/share/initramfs-tools/scripts/casper-bottom/ only ever run as part of
+# casper's live-boot initramfs sequence, so this never needs a separate
+# "am I running live?" check: an installed system never executes this script
+# at all, it only exists inside the live initrd.
+#
+# build.sh only copies this file in for GUI strains (the same ones that get
+# Calamares wired in at all) -- see iso/build.sh's HEADLESS_STRAINS check.
+
+PREREQ=""
+DESCRIPTION="Adding Crucible OS install icon to live session user..."
+
+prereqs()
+{
+    echo "$PREREQ"
+}
+
+case $1 in
+prereqs)
+    prereqs
+    exit 0
+    ;;
+esac
+
+. /scripts/casper-functions
+load_confmodule
+
+log_begin_msg "$DESCRIPTION"
+
+DESKTOP_FILE=/usr/share/applications/install-crucible-os.desktop
+if [ -f "/root$DESKTOP_FILE" ] && [ -n "$USERNAME" ]; then
+    chroot /root install -d -o "$USERNAME" -g "$USERNAME" "/home/$USERNAME/Desktop"
+    chroot /root install -D -o "$USERNAME" -g "$USERNAME" "$DESKTOP_FILE" "/home/$USERNAME/Desktop/$(basename "$DESKTOP_FILE")"
+fi
+
+log_end_msg

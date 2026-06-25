@@ -55,18 +55,12 @@ HEADLESS_STRAINS=(server cloud)
 rm -f "$PACKAGE_LISTS/calamares.list.chroot"
 rm -rf "$INCLUDES/etc/calamares"
 rm -f "$INCLUDES/usr/share/applications/install-crucible-os.desktop"
+rm -rf "$INCLUDES/usr/share/initramfs-tools/scripts/casper-bottom"
 if [[ ! " ${HEADLESS_STRAINS[*]} " == *" $STRAIN "* ]]; then
     echo -e "\033[36mWiring in Calamares (installer config, untested -- see iso/calamares/README.md)...\033[0m"
     echo "calamares" > "$PACKAGE_LISTS/calamares.list.chroot"
     mkdir -p "$INCLUDES/etc/calamares"
     rsync -a --delete "$REPO_ROOT/iso/calamares/" "$INCLUDES/etc/calamares/" --exclude README.md
-    # Manual-launch desktop entry, not an auto-launch-on-live-boot hook --
-    # I don't have a build host to verify which live-session autostart
-    # mechanism (casper hook vs. autostart .desktop with a live-media
-    # check) is actually correct for this live-build/Calamares combination,
-    # so this doesn't guess at one. Whoever first boots a real image needs
-    # to confirm this actually shows up and works, then decide whether an
-    # autostart hook is worth adding.
     mkdir -p "$INCLUDES/usr/share/applications"
     cat > "$INCLUDES/usr/share/applications/install-crucible-os.desktop" <<EOF
 [Desktop Entry]
@@ -77,6 +71,17 @@ Icon=system-software-install
 Terminal=false
 Categories=System;
 EOF
+    # Live-session autostart: a casper-bottom hook (see
+    # iso/casper-hooks/casper-bottom/README.md) drops the desktop entry above
+    # onto the live user's Desktop during boot -- the same documented
+    # mechanism real live-build+Calamares distros use (verified against
+    # maui-linux/calamares-casper's casper-bottom script). config/hooks/live/
+    # forces an update-initramfs run so this plain dropped-in file (not a
+    # .deb, so no dpkg trigger) actually gets embedded into the live initrd.
+    mkdir -p "$INCLUDES/usr/share/initramfs-tools/scripts/casper-bottom"
+    cp "$REPO_ROOT/iso/casper-hooks/casper-bottom/25-crucible-install-icon" \
+        "$INCLUDES/usr/share/initramfs-tools/scripts/casper-bottom/"
+    chmod +x "$INCLUDES/usr/share/initramfs-tools/scripts/casper-bottom/25-crucible-install-icon"
 fi
 
 echo -e "\033[36mCopying repo scripts into the image (opt/distro/, /usr/local/bin)...\033[0m"

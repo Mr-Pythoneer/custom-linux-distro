@@ -1,0 +1,20 @@
+#!/bin/sh
+#
+# Forces an initramfs rebuild so the casper-bottom hook
+# (config/includes.chroot/usr/share/initramfs-tools/scripts/casper-bottom/25-crucible-install-icon)
+# actually gets embedded into the live initrd. Casper-bottom scripts shipped
+# by real .deb packages get this for free via dpkg triggers when their
+# package installs/updates -- our script is a plain file dropped in via
+# includes.chroot, not a package, so nothing triggers update-initramfs for
+# it automatically. Explicit > assuming live-build does this on its own;
+# this hasn't been run against a real build host to confirm it was even
+# necessary, but it's the safe choice either way (a redundant
+# update-initramfs run is harmless).
+#
+# live-build hook convention: config/hooks/live/*.hook.chroot runs inside
+# the chroot, after all package/file customization -- confirmed against
+# Debian's live-manual "customizing-contents" docs, not guessed.
+
+set -e
+
+update-initramfs -u
