@@ -19,13 +19,21 @@ run" instead of "needs a GPU."
 ## What's missing, not faked
 
 `branding/crucibleos/branding.desc` references `logo.png`, `welcome.png`,
-and `show.qml`. **`logo.png`/`welcome.png` now exist** — built from real SVG
-source (`branding/src/`, crucible-vessel motif) via `branding/build.sh`,
-which rasterizes and copies them in here automatically; see
-`branding/README.md` for the pipeline. **`show.qml` still does not exist** —
-fabricating a slideshow script with QML syntax I can't render/verify would
-be worse than just saying so; it needs someone who can actually check a QML
-file displays right (tracked separately).
+and `show.qml` — **all three now exist.**
+
+- `logo.png`/`welcome.png` — built from real SVG source (`branding/src/`,
+  crucible-vessel motif) via `branding/build.sh`; see `branding/README.md`.
+- `show.qml` — 6 slides (intro + one per mode), written against Calamares'
+  own default slideshow source (`calamares/calamares`
+  `src/branding/default/show.qml`) and its `src/branding/README.md`, fetched
+  and read directly rather than guessed from memory. Uses `slideshowAPI: 2`
+  (now set in `branding.desc`) — async load, `onActivate()`/`onLeave()`
+  lifecycle functions — since Calamares' own docs flag the older
+  `onCompleted`-based API 1 as headed for deprecation. No local QML
+  tooling (`qmlscene`/`qmllint`) exists on this Mac to actually render it,
+  so brace/paren balance was checked programmatically but **visual
+  rendering is still unverified** — needs a real Calamares run to confirm
+  it displays correctly, same as everything else in this directory.
 
 ## How this plugs into the ISO
 
