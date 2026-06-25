@@ -19,11 +19,13 @@ run" instead of "needs a GPU."
 ## What's missing, not faked
 
 `branding/crucibleos/branding.desc` references `logo.png`, `welcome.png`,
-and `show.qml` — **none of these exist yet.** Fabricating placeholder image
-files or a slideshow script with syntax I can't verify would be worse than
-just saying so: these need to be created by someone with actual brand
-assets (once the distro has a name/logo) and, for the slideshow, by someone
-who can render and check a QML file actually displays right.
+and `show.qml`. **`logo.png`/`welcome.png` now exist** — built from real SVG
+source (`branding/src/`, crucible-vessel motif) via `branding/build.sh`,
+which rasterizes and copies them in here automatically; see
+`branding/README.md` for the pipeline. **`show.qml` still does not exist** —
+fabricating a slideshow script with QML syntax I can't render/verify would
+be worse than just saying so; it needs someone who can actually check a QML
+file displays right (tracked separately).
 
 ## How this plugs into the ISO
 

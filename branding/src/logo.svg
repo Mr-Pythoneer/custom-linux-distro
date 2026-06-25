@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffd27a"/>
+      <stop offset="55%" stop-color="#ff7a3d"/>
+      <stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+    <linearGradient id="vessel" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#5a5a5a"/>
+      <stop offset="100%" stop-color="#2d2d2d"/>
+    </linearGradient>
+  </defs>
+
+  <circle cx="256" cy="256" r="248" fill="#1a1a1a"/>
+
+  <!-- molten glow inside the vessel -->
+  <path d="M 156 230 L 200 380 Q 256 420 312 380 L 356 230 Z" fill="url(#glow)"/>
+
+  <!-- crucible vessel body, tapered, with pour lip -->
+  <path d="M 120 200
+           L 392 200
+           L 360 360
+           Q 360 392 312 404
+           L 200 404
+           Q 152 392 152 360
+           Z"
+        fill="none" stroke="url(#vessel)" stroke-width="26" stroke-linejoin="round"/>
+
+  <!-- twin handles -->
+  <path d="M 120 210 Q 86 210 86 244 Q 86 270 116 270" fill="none" stroke="#5a5a5a" stroke-width="20" stroke-linecap="round"/>
+  <path d="M 392 210 Q 426 210 426 244 Q 426 270 396 270" fill="none" stroke="#5a5a5a" stroke-width="20" stroke-linecap="round"/>
+
+  <!-- rim highlight -->
+  <rect x="112" y="188" width="288" height="24" rx="10" fill="#6e6e6e"/>
+
+  <!-- three rising sparks, echoing the 3 active modes at any moment -->
+  <circle cx="226" cy="150" r="8" fill="#ffb347"/>
+  <circle cx="256" cy="116" r="6" fill="#ffd27a"/>
+  <circle cx="288" cy="148" r="7" fill="#ff9447"/>
+</svg>

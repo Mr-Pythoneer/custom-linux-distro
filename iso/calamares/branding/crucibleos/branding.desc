@@ -1,9 +1,9 @@
 # Calamares branding descriptor. componentName must match the directory
 # name (crucibleos) and the `branding:` value in settings.conf.
 #
-# Image/slideshow placeholders below are still NOT created -- see
-# README.md "What's missing, not faked." Naming is now real (Crucible OS,
-# chosen 2026-06-25), so the strings are no longer placeholders.
+# logo.png/welcome.png are real now (built from branding/src/ via
+# branding/build.sh, copied here automatically). show.qml is still NOT
+# created -- see README.md "What's missing, not faked."
 
 componentName: crucibleos
 

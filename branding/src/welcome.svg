@@ -1,0 +1,41 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 460">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1a1a1a"/>
+      <stop offset="100%" stop-color="#2d2d2d"/>
+    </linearGradient>
+    <linearGradient id="glow2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffd27a"/>
+      <stop offset="55%" stop-color="#ff7a3d"/>
+      <stop offset="100%" stop-color="#c2410c"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1024" height="460" fill="url(#bg)"/>
+
+  <!-- crucible mark, left-aligned -->
+  <g transform="translate(60,60) scale(0.7)">
+    <path d="M 156 230 L 200 380 Q 256 420 312 380 L 356 230 Z" fill="url(#glow2)"/>
+    <path d="M 120 200 L 392 200 L 360 360 Q 360 392 312 404 L 200 404 Q 152 392 152 360 Z"
+          fill="none" stroke="#5a5a5a" stroke-width="26" stroke-linejoin="round"/>
+    <path d="M 120 210 Q 86 210 86 244 Q 86 270 116 270" fill="none" stroke="#5a5a5a" stroke-width="20" stroke-linecap="round"/>
+    <path d="M 392 210 Q 426 210 426 244 Q 426 270 396 270" fill="none" stroke="#5a5a5a" stroke-width="20" stroke-linecap="round"/>
+    <rect x="112" y="188" width="288" height="24" rx="10" fill="#6e6e6e"/>
+    <circle cx="226" cy="150" r="8" fill="#ffb347"/>
+    <circle cx="256" cy="116" r="6" fill="#ffd27a"/>
+    <circle cx="288" cy="148" r="7" fill="#ff9447"/>
+  </g>
+
+  <!-- wordmark -->
+  <text x="430" y="240" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="72" font-weight="bold" fill="#ffffff">Crucible OS</text>
+  <text x="430" y="290" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="26" fill="#b5b5b5">Gaming · AI · Server · Creative · Normal</text>
+
+  <!-- mode color chips -->
+  <g transform="translate(430,330)">
+    <rect x="0"   y="0" width="28" height="28" rx="6" fill="#3daee9"/>
+    <rect x="40"  y="0" width="28" height="28" rx="6" fill="#ff7a3d"/>
+    <rect x="80"  y="0" width="28" height="28" rx="6" fill="#6ee7b7"/>
+    <rect x="120" y="0" width="28" height="28" rx="6" fill="#c084fc"/>
+    <rect x="160" y="0" width="28" height="28" rx="6" fill="#9ca3af"/>
+  </g>
+</svg>
