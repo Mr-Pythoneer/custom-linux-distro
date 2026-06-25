@@ -6,7 +6,7 @@ Living checklist for the whole distro. Organized by the same structure as `DESIG
 
 - [x] Architecture plan (`DESIGN.md`)
 - [x] Repo scaffolding, disk-as-cache workflow established
-- [ ] Pick/reserve a distro name (currently unnamed — repo is `custom-linux-distro` as a placeholder)
+- [x] Name picked: **Crucible OS** (2026-06-25). No collisions found (checked against existing "Forge OS"/"Anvil Linux" projects, which were taken — Crucible OS/Crucible Linux was clear). Repo renamed to `crucible-os`, Calamares branding/build.sh/ISO strings updated to match.
 - [ ] LICENSE for the distro project itself (currently has none — Crucible12's MIT license doesn't automatically cover this repo)
 
 ## 1. Base system

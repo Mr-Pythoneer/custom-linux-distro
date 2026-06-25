@@ -46,8 +46,8 @@ lb config \
     --linux-flavours generic-hwe-24.04 \
     --archive-areas "main restricted universe multiverse" \
     --debian-installer none \
-    --iso-application "Custom Linux Distro" \
-    --iso-volume "CUSTOMDISTRO"
+    --iso-application "Crucible OS" \
+    --iso-volume "CRUCIBLEOS"
 
 echo -e "\033[36mBuilding ISO (this takes a long time and a lot of disk — run on the build host, not a laptop)...\033[0m"
 lb build

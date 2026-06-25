@@ -1,4 +1,4 @@
-# Custom Linux Distro — Architecture Plan
+# Crucible OS — Architecture Plan
 
 ## Goal (restated, with realistic framing)
 

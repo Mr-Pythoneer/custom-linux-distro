@@ -18,7 +18,7 @@ run" instead of "needs a GPU."
 
 ## What's missing, not faked
 
-`branding/customdistro/branding.desc` references `logo.png`, `welcome.png`,
+`branding/crucibleos/branding.desc` references `logo.png`, `welcome.png`,
 and `show.qml` — **none of these exist yet.** Fabricating placeholder image
 files or a slideshow script with syntax I can't verify would be worse than
 just saying so: these need to be created by someone with actual brand
