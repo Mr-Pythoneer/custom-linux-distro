@@ -127,8 +127,26 @@ Living checklist for the whole distro. Organized by the same structure as `DESIG
 - [ ] Run the same kind of manual bash-5 execution pass on a real Ubuntu box, not just locally via homebrew bash on macOS — this caught real bugs but isn't a substitute for testing in the actual target environment
 - [ ] CI currently only lints/parses — no job actually executes any script (can't, most need real system state). Worth revisiting whether any script could get a meaningful smoke test in CI (e.g. `distro-modectl status` with no root needed) once this is on a real Linux runner doing more than syntax checks
 
-## 11. Open questions (carried over from DESIGN.md, still unanswered)
+## 11. Open questions (carried over from DESIGN.md) — resolved or defaulted
 
-- Target hardware scope beyond your own rig — how broad does day-one hardware support need to be?
-- Solo project or structured for eventual contributors?
-- Distro name
+- ~~Distro name~~ — **resolved**: Crucible OS (see §0).
+- ~~Is the AI gateway Claude-only or local-model-first?~~ — **resolved**:
+  local-first by design (Crucible12/`llama-server`), Claude-cloud is an
+  explicit opt-in toggle only (`distro-ai-cloud-toggle`), never silently
+  substituted in. See §3 and `modes/ai/README.md`.
+- Target hardware scope beyond your own rig — **resolved by your own
+  answer** ("every single kind of machine that you can think of that might
+  even remotely run linux") into the Tier 1/2/3 breakdown in DESIGN.md
+  §5b: Tier 1 (x86_64, same build pipeline, 6 strains scaffolded) is the
+  actual buildable scope; Tier 2 (ARM64/Apple Silicon/RISC-V — different
+  arch, different bootloader, a separate engineering effort) and Tier 3
+  (embedded/Buildroot — not a fit for what this project is) are explicitly
+  deferred, not silently dropped.
+- Solo project or structured for eventual contributors? — **never
+  explicitly answered; defaulted to "structured as if for contributors"**
+  as the practical choice, since the repo already has a public GitHub
+  remote, a top-level README/LICENSE/NOTICE, a README in nearly every
+  subdirectory, and public CI (`.github/workflows/`) — all low-cost to do
+  up front and either neutral or beneficial even if this stays solo. If
+  you'd rather not take outside contributions, nothing here forces that;
+  it's just kept the door open rather than closed by default.

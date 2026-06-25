@@ -170,8 +170,16 @@ project than a desktop/server distro with a Calamares installer.
 
 ---
 
-## Open questions to settle before building
+## Open questions — resolved or defaulted (see TODO.md §11 for the full writeup)
 
-- Target hardware scope: are you building/testing this on your own current rig (Nvidia GPU + AMD CPU desktop?) or aiming for broader hardware support from day one? Narrower target = much faster to a working v1.
-- Solo project or do you want this structured so others could eventually contribute (affects whether you set up public CI/repo structure now vs later)?
-- Is the AI gateway meant to be Claude-only (using your existing Claude subscription pattern), or genuinely local-model-first with Claude as an optional add-on?
+- ~~Distro name~~ — resolved: Crucible OS.
+- ~~AI gateway Claude-only vs. local-first?~~ — resolved: local-first
+  (Crucible12), Claude-cloud is an explicit opt-in toggle only, never
+  silently substituted in.
+- Target hardware scope — resolved by your own answer into the Tier 1/2/3
+  breakdown in §5b: Tier 1 (x86_64, 6 strains) is the real buildable scope;
+  Tier 2 (different CPU architecture)/Tier 3 (embedded) explicitly deferred.
+- Solo vs. structured-for-contributors — never explicitly answered;
+  defaulted to "structured as if for contributors" (public repo,
+  README/LICENSE everywhere, public CI) as the low-cost, either-neutral-
+  or-beneficial choice rather than leaving it undecided indefinitely.
