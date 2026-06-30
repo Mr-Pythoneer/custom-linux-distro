@@ -122,6 +122,176 @@
       "wine_version": "staging",
       "notes": "Not a specific app -- a generic starting point for the very common 'this one app needs .NET and a specific font' case DESIGN.md §2 calls out winetricks as the answer for. Try this verb set first for unlisted .NET-based Windows utilities before assuming Wine can't run it at all.",
       "source": "winetricks' own documented verb set"
+    },
+    {
+      "id": "notepad-plus-plus",
+      "name": "Notepad++",
+      "category": "editors",
+      "status": "workaround",
+      "winetricks_verbs": ["corefonts"],
+      "wine_version": "staging",
+      "notes": "Rates Platinum/Gold on WineHQ AppDB and runs near-flawlessly out of the box; corefonts is cosmetic (cleaner font rendering), not required to launch. Plugins generally work. Native-feeling alternatives if preferred: Geany (apt: geany) or VSCodium (flatpak: com.vscodium.codium).",
+      "source": "WineHQ AppDB (Notepad++ version page iId=13036)"
+    },
+    {
+      "id": "irfanview",
+      "name": "IrfanView",
+      "category": "graphics",
+      "status": "workaround",
+      "winetricks_verbs": ["corefonts"],
+      "wine_version": "staging",
+      "notes": "Platinum/Gold on WineHQ AppDB; the 64-bit build runs well out of the box, corefonts just tidies UI fonts. Optionally add gdiplus and the PlugIns pack. Native alternatives: nomacs (apt: nomacs) or gThumb (apt: gthumb).",
+      "source": "WineHQ AppDB (IrfanView application iId=163)"
+    },
+    {
+      "id": "foobar2000",
+      "name": "foobar2000",
+      "category": "media",
+      "status": "workaround",
+      "winetricks_verbs": ["corefonts"],
+      "wine_version": "staging",
+      "notes": "Runs well under Wine and most plugins work (see github.com/dweymouth/foobar-on-linux for .desktop/MIME integration); ensure a working Wine audio backend (winepulse/pipewire, default in modern Wine). If a Wine regression causes crashes, pin a known-good Wine branch. Native alternatives with a similar philosophy: DeaDBeeF (flatpak: music.deadbeef.player) or Strawberry (flatpak: org.strawberrymusicplayer.strawberry).",
+      "source": "WineHQ AppDB (foobar2000 version iId=2355)"
+    },
+    {
+      "id": "photoshop-cs6",
+      "name": "Adobe Photoshop CS6 (13.0)",
+      "category": "creative",
+      "status": "workaround",
+      "winetricks_verbs": ["atmlib", "gdiplus", "msxml3", "msxml6", "vcrun2005", "vcrun2008", "vcrun2010", "corefonts", "fontsmooth=rgb"],
+      "wine_version": "staging",
+      "notes": "Use a WINEARCH=win32 prefix. CS6 is the last well-supported Photoshop under Wine (long-standing Gold-ish AppDB consensus); the subscription CC versions are far harder/broken. For new work, native GIMP (flatpak: org.gimp.GIMP) or Krita (flatpak: org.kde.krita) are the real answers.",
+      "source": "WineHQ AppDB + community CS6-on-Wine verb recipes"
+    },
+    {
+      "id": "7-zip",
+      "name": "7-Zip",
+      "category": "utilities",
+      "status": "native-alternative-recommended",
+      "winetricks_verbs": [],
+      "native_alternative": {
+        "apt_package": "p7zip-full",
+        "flatpak_id": "io.github.peazip.PeaZip",
+        "notes": "p7zip is the same 7-Zip engine natively (apt: p7zip-full, plus p7zip-rar for RAR); for a 7-Zip-style GUI use PeaZip (Flathub: io.github.peazip.PeaZip), which uses the p7zip backend. The Windows 7-Zip GUI runs Platinum under Wine but there's no reason to use it."
+      },
+      "notes": "Archiver — use the native engine, not Wine.",
+      "source": "WineHQ AppDB (7-Zip iAppId=1487); flathub.org/apps/io.github.peazip.PeaZip"
+    },
+    {
+      "id": "winrar",
+      "name": "WinRAR",
+      "category": "utilities",
+      "status": "native-alternative-recommended",
+      "winetricks_verbs": [],
+      "native_alternative": {
+        "apt_package": "unrar",
+        "flatpak_id": "io.github.peazip.PeaZip",
+        "notes": "unrar (apt, multiverse) extracts RARs; RARLAB also ships official native Linux 'rar'/'unrar' binaries (win-rar.com/rar-linux-mac.html) — the 'rar' binary is needed to CREATE rar archives. PeaZip gives a GUI."
+      },
+      "notes": "RARLAB ships native Linux binaries, so Wine is unnecessary.",
+      "source": "win-rar.com/rar-linux-mac.html"
+    },
+    {
+      "id": "microsoft-teams",
+      "name": "Microsoft Teams",
+      "category": "communication",
+      "status": "native-alternative-recommended",
+      "winetricks_verbs": [],
+      "native_alternative": {
+        "apt_package": null,
+        "flatpak_id": "com.github.IsmaelMartinez.teams_for_linux",
+        "notes": "Microsoft discontinued the native Linux Teams client and the Windows client doesn't work reliably under Wine. Official path is the Teams PWA in a browser; for a standalone app with tray/notifications use teams-for-linux (Flathub: com.github.IsmaelMartinez.teams_for_linux), the de-facto community wrapper."
+      },
+      "notes": "No working Wine path; use the PWA or teams-for-linux.",
+      "source": "github.com/IsmaelMartinez/teams-for-linux"
+    },
+    {
+      "id": "msi-afterburner",
+      "name": "MSI Afterburner",
+      "category": "system",
+      "status": "native-alternative-recommended",
+      "winetricks_verbs": [],
+      "native_alternative": {
+        "apt_package": "corectrl",
+        "flatpak_id": "com.leinardi.gwe",
+        "notes": "Kernel-level GPU tools can't work under Wine (they need the RTCore driver + direct hardware access). Native replacements: CoreCtrl (apt: corectrl) for AMD; GreenWithEnvy (Flathub: com.leinardi.gwe) for NVIDIA; MangoHud (apt: mangohud) for the RTSS-style on-screen overlay."
+      },
+      "notes": "Categorically broken under Wine (kernel-mode driver); use native GPU tools.",
+      "source": "alternativeto.net/software/msi-afterburner (Linux)"
+    },
+    {
+      "id": "rufus",
+      "name": "Rufus",
+      "category": "utilities",
+      "status": "native-alternative-recommended",
+      "winetricks_verbs": [],
+      "native_alternative": {
+        "apt_package": "gnome-disk-utility",
+        "flatpak_id": "io.balena.etcher",
+        "notes": "Rufus needs raw physical-disk access Wine doesn't pass through, so it can't write bootable USBs under Wine. Native: balenaEtcher (Flathub: io.balena.etcher), GNOME Disks 'Restore Disk Image' (apt: gnome-disk-utility), Ventoy (ventoy.net), or plain dd."
+      },
+      "notes": "Needs direct device access; broken under Wine.",
+      "source": "flathub.org/apps/io.balena.etcher"
+    },
+    {
+      "id": "paint-net",
+      "name": "Paint.NET",
+      "category": "graphics",
+      "status": "native-alternative-recommended",
+      "winetricks_verbs": [],
+      "native_alternative": {
+        "apt_package": "krita",
+        "flatpak_id": "com.github.PintaProject.Pinta",
+        "notes": "Modern Paint.NET depends on Direct2D + the Windows Animation Manager, both severely underdeveloped in Wine — it doesn't run reliably. Pinta (Flathub: com.github.PintaProject.Pinta) is the closest Paint.NET-style layered editor; Krita (apt: krita / flathub: org.kde.krita) for richer work."
+      },
+      "notes": "Broken under Wine (Direct2D); use Pinta/Krita.",
+      "source": "Fedora discussion + WineHQ AppDB (Paint.NET)"
+    },
+    {
+      "id": "sketchup",
+      "name": "SketchUp (desktop)",
+      "category": "creative",
+      "status": "native-alternative-recommended",
+      "winetricks_verbs": [],
+      "native_alternative": {
+        "apt_package": null,
+        "flatpak_id": "org.freecad.FreeCAD",
+        "notes": "Desktop SketchUp 2017+ fails under Wine with OpenGL init errors ('ChoosePixelFormat failed') — Wine's GL translation doesn't satisfy its OpenGL 3.x needs. Supported cross-platform path is the SketchUp Free WEB app (app.sketchup.com); native desktop CAD: FreeCAD (flathub: org.freecad.FreeCAD) or Blender (flathub: org.blender.Blender)."
+      },
+      "notes": "Broken under Wine (OpenGL); use the web app or FreeCAD/Blender.",
+      "source": "forums.sketchup.com OpenGL-under-Wine threads"
+    },
+    {
+      "id": "roblox",
+      "name": "Roblox",
+      "category": "games",
+      "status": "native-alternative-recommended",
+      "winetricks_verbs": [],
+      "native_alternative": {
+        "apt_package": null,
+        "flatpak_id": "org.vinegarhq.Sober",
+        "notes": "Roblox's Hyperion/Byfron anticheat intentionally blocks Wine, so the Windows client + Grapejuice/Vinegar Wine path is dead. Sober (Flathub: org.vinegarhq.Sober) runs the Roblox ANDROID client containerized on Linux (NOT Wine). Unofficial, x86_64 + SSE4.2 only, and may be blocked by Roblox at any time — use at your own account risk."
+      },
+      "notes": "Pure-Wine Roblox is broken by anticheat; Sober is the non-Wine community path.",
+      "source": "flathub.org/apps/org.vinegarhq.Sober"
+    },
+    {
+      "id": "affinity-suite",
+      "name": "Affinity Photo / Designer / Publisher (Serif)",
+      "category": "creative",
+      "status": "broken",
+      "winetricks_verbs": [],
+      "notes": "Does NOT work on stock Wine/Proton. It runs only via Lutris using the ElementalWarrior custom Wine fork plus specific tricks (vcrun2022, dotnet48, corefonts, tahoma, a Windows.winmd + wintypes shim, DXVK/Vulkan renderer) — fiddly and fork-dependent, not a plain-winetricks workaround, so it's listed as broken-for-mainline-Wine. If you need it, follow the AffinityOnLinux Lutris install script (github.com/seapear/AffinityOnLinux). Native alternatives for new work: GIMP/Krita (raster), Inkscape (apt: inkscape) (vector), Scribus (apt: scribus) (layout).",
+      "source": "github.com/seapear/AffinityOnLinux"
+    },
+    {
+      "id": "kernel-anticheat-games",
+      "name": "Kernel-anticheat games (Valorant, Fortnite, PUBG, CoD, etc.)",
+      "category": "games",
+      "status": "broken",
+      "winetricks_verbs": [],
+      "notes": "Titles whose kernel-level anticheat is NOT enabled for Linux by the developer (Vanguard, or EAC/BattlEye without Proton enablement) will NOT run, and attempting them can flag/ban the account. No winetricks verb fixes anticheat. Some EAC/BattlEye games DO work when the dev ships Proton/Linux support — always check the specific title on areweanticheatyet.com / ProtonDB before assuming. (Genshin Impact runs technically via Proton but is officially unsupported with non-zero ban risk — use at your own risk.)",
+      "source": "areweanticheatyet.com"
     }
   ]
 }
