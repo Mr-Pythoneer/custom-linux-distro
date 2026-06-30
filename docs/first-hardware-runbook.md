@@ -7,7 +7,7 @@ instead of improvised. Two tracks, because the hardware arrives in two pieces:
   installer + everything that does NOT need a GPU. This is where the entire
   `iso/` pipeline runs for the very first time.
 - **Track B — the 5090 build (~early August 2026):** everything GPU-dependent —
-  AI mode (Crucible12), real driver/NVENC, real Proton-GE game launches.
+  AI mode (LM Studio + ComfyUI), real driver/NVENC, real Proton-GE game launches.
 
 Both follow the project's **6-stage OS testing methodology**: (1) build
 succeeds → (2) ISO boots → (3) installer works → (4) installed system boots
@@ -136,27 +136,29 @@ the driver is either too old (<570) or not the `-open` variant — add the
 graphics-drivers PPA and reinstall (see the readiness doc). Confirm Secure Boot
 MOK enrollment if SB is on.
 
-### B2 — AI mode (Crucible12 — the biggest unverified piece)
+### B2 — AI mode (LM Studio + ComfyUI — the biggest unverified piece)
+
+Run as your normal user (LM Studio is per-user). See `modes/ai/README.md`.
 
 ```bash
 cd ../modes/ai
-# Install CUDA 12.8+/13.x first (see 01-install-llamacpp.sh's printed guide), then:
-./setup/01-install-llamacpp.sh    # builds llama.cpp, sm_120
-./setup/02-download-models.sh crucible
-./setup/03-install-opencode.sh
-./setup/run-crucible.sh           # foreground first, before systemd-ifying
-./setup/benchmark.sh              # confirm GPU utilization via nvidia-smi
+./setup/01-install-lmstudio.sh        # headless llmster + lms CLI
+./setup/02-preload-models.sh coding   # start with just the coding models (or omit arg for ALL ~150GB)
+distro-ai-model use coding            # loads Qwen2.5-Coder-32B, server on :8080
+distro-ai-ask "write a bubble sort in rust"   # confirm the thin client answers
 ```
-**Pass / tuning:** `llama-server` answers on `localhost:8080`; `nvidia-smi` shows
-VRAM in use. **Tune `--n-cpu-moe`** per preset to fit 32 GB without CUDA OOM
-(raise N → more to RAM). **Enable DDR5 EXPO/XMP in BIOS** — hybrid-preset
-throughput drops ~3× without it. Then verify the systemd path:
+**Pass / tuning:** `nvidia-smi` shows VRAM in use; `distro-ai-ask` returns a
+reply on `localhost:8080`. For **Llama-3.3-70B** (exceeds 32 GB) tune the offload
+ratio: `lms load lmstudio-community/Llama-3.3-70B-Instruct-GGUF --gpu 0.8
+--estimate-only` first to preview the fit, expect ~6–12 tok/s. Then the rest:
 ```bash
-sudo cp systemd/crucible12@.service /etc/systemd/system/   # now has LimitMEMLOCK=infinity
-sudo systemctl daemon-reload
-distro-ai-preset switch crucible
-distro-ai-preset switch max        # confirm clean teardown — no port 8080 / VRAM contention
-journalctl -u crucible12@crucible.service | grep -i mlock   # should NOT warn about mlock now
+distro-ai-model use vision            # qwen2.5-vl:32b — attach an image, confirm it sees it (needs current LM Studio CUDA runtime)
+# auto-start the server on login:
+mkdir -p ~/.config/systemd/user && cp systemd/lmstudio.service ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now lmstudio.service
+# image generation (separate runtime):
+./setup/03-install-comfyui.sh && ./setup/04-download-image-models.sh
+distro-ai-image                       # ComfyUI web UI on :8188 — render a test image with FLUX.1-schnell / SDXL
 ```
 
 ### B3 — Gaming (real launches)

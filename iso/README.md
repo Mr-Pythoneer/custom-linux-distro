@@ -54,7 +54,7 @@ pattern `build.sh` already uses for Calamares and the casper-bottom hook.
 
 - `build.sh` — copies `modes/` and `drivers/` from the repo root into
   `config/includes.chroot/opt/distro/` (symlinking `distro-modectl` and
-  `distro-ai-preset` into `/usr/local/bin/` — as symlinks, not copies,
+  the `distro-ai-*` CLIs into `/usr/local/bin/` — as symlinks, not copies,
   since `distro-modectl` looks up its `profiles/` directory relative to
   its own location), then runs `lb config` + `lb build`.
 - `config/package-lists/base.list.chroot` — universal CLI tools every

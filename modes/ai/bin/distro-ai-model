@@ -1,0 +1,154 @@
+#!/usr/bin/env bash
+#
+# AI-mode model control surface (LM Studio). Replaces the legacy
+# distro-ai-preset. Loads models by use-case from config/models.catalog.json
+# and manages the OpenAI-compatible server on port 8080 (so the existing
+# distro-ai-ask / overlay / nautilus clients work unchanged).
+#
+# Run as the desktop user (LM Studio is per-user in ~/.lmstudio), NOT via sudo.
+#
+# Usage:
+#   distro-ai-model list                       -- show use-cases + models
+#   distro-ai-model use <use-case> [variant]   -- load the best (or named) model for a use-case
+#   distro-ai-model load <catalog-id>          -- load a specific model
+#   distro-ai-model server start|stop|status   -- control the :8080 server
+#   distro-ai-model status                     -- what's loaded (lms ps)
+#   distro-ai-model unload                     -- unload all models
+#
+# e.g.  distro-ai-model use coding       (-> Qwen2.5-Coder-32B)
+#       distro-ai-model use day-to-day fast   (-> Llama-3.2-3B)
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CATALOG="$SCRIPT_DIR/../config/models.catalog.json"
+PORT=8080
+LMS="$HOME/.lmstudio/bin/lms"
+[ -x "$LMS" ] || LMS="$(command -v lms 2>/dev/null || echo "$HOME/.lmstudio/bin/lms")"
+
+die() { echo "$1" >&2; exit 1; }
+[ -f "$CATALOG" ] || die "Catalog not found: $CATALOG"
+command -v python3 >/dev/null 2>&1 || die "python3 required to read the catalog."
+
+need_lms() { [ -x "$LMS" ] || die "lms CLI not found ($LMS) — run modes/ai/setup/01-install-lmstudio.sh first."; }
+
+# catalog_query <python-expr-printing-output> — runs a python snippet with the
+# catalog loaded as `cat`. Args after the snippet are sys.argv[1:].
+catalog_py() { CATALOG="$CATALOG" python3 -c "$1" "${@:2}"; }
+
+resolve_usecase_model() {  # <usecase> [variant] -> prints catalog id
+    catalog_py '
+import json, os, sys
+cat = json.load(open(os.environ["CATALOG"]))
+uc_name = sys.argv[1]; variant = sys.argv[2] if len(sys.argv) > 2 else None
+uc = cat["use_cases"].get(uc_name)
+if not uc: print(f"__ERR__ unknown use-case: {uc_name}", file=sys.stderr); sys.exit(2)
+if variant:
+    mid = uc.get(variant)
+    if not mid:
+        have = [k for k in uc if k not in ("label", "runtime")]
+        print("__ERR__ use-case {} has no variant {} (have: {})".format(uc_name, variant, have), file=sys.stderr); sys.exit(2)
+else:
+    mid = uc.get("best") or next((v for k,v in uc.items() if k not in ("label","runtime")), None)
+print(mid)
+' "$@"
+}
+
+model_field() {  # <catalog-id> <field> -> prints field (or empty)
+    catalog_py '
+import json, os, sys
+cat = json.load(open(os.environ["CATALOG"]))
+m = cat["models"].get(sys.argv[1], {})
+print(m.get(sys.argv[2], ""))
+' "$@"
+}
+
+ensure_server() {
+    need_lms
+    "$LMS" daemon up >/dev/null 2>&1 || true
+    # `lms server start` is idempotent (it reuses the running server / last
+    # port), so just (re)assert it on 8080 rather than parsing status text.
+    "$LMS" server start --port "$PORT" >/dev/null 2>&1 || die "Failed to start the LM Studio server on port $PORT."
+}
+
+load_model() {  # <catalog-id>
+    local id="$1"
+    local repo runtime gpu ctx
+    repo="$(model_field "$id" repo)"
+    runtime="$(model_field "$id" runtime)"
+    [ -n "$repo" ] || die "Unknown catalog id: $id"
+    if [ "$runtime" = "comfyui" ]; then
+        die "'$id' is an image-generation model (ComfyUI), not an LM Studio model. Use: distro-ai-image"
+    fi
+    gpu="$(model_field "$id" gpu)"; [ -n "$gpu" ] || gpu="max"
+    ctx="$(model_field "$id" context)"; [ -n "$ctx" ] || ctx="8192"
+
+    ensure_server
+    echo "Loading $id ($repo, --gpu $gpu, ctx $ctx) ..."
+    "$LMS" unload --all >/dev/null 2>&1 || true   # one model at a time (VRAM)
+    "$LMS" load "$repo" --gpu "$gpu" --context-length "$ctx" --identifier "$id" --yes 2>/dev/null \
+        || "$LMS" load "$repo" --gpu "$gpu" --context-length "$ctx" --identifier "$id" \
+        || die "Failed to load $id. Is it downloaded? (modes/ai/setup/02-preload-models.sh $id). Check: $LMS ls"
+    local note; note="$(model_field "$id" note)"
+    [ -n "$note" ] && echo "Note: $note"
+    echo "Loaded. API: http://127.0.0.1:$PORT/v1 (model id: $id)"
+}
+
+case "${1:-}" in
+    list)
+        catalog_py '
+import json, os
+cat = json.load(open(os.environ["CATALOG"]))
+print("Use-cases:")
+for name, uc in cat["use_cases"].items():
+    variants = ", ".join("{}={}".format(k, v) for k, v in uc.items() if k not in ("label", "runtime"))
+    rt = " [ComfyUI]" if uc.get("runtime") == "comfyui" else ""
+    print("  {:12s} {}{}: {}".format(name, uc.get("label", ""), rt, variants))
+print("")
+print("Models:")
+for mid, m in cat["models"].items():
+    tag = " (vision)" if m.get("vision") else (" (image/ComfyUI)" if m.get("runtime") == "comfyui" else "")
+    print("  {:24s} {} GB{}".format(mid, m.get("size_gb", "?"), tag))
+'
+        ;;
+    use)
+        [ $# -ge 2 ] || die "Usage: $(basename "$0") use <use-case> [variant]"
+        mid="$(resolve_usecase_model "$2" "${3:-}")" || exit 2
+        case "$mid" in __ERR__*) echo "${mid#__ERR__ }" >&2; exit 2 ;; esac
+        [ -n "$mid" ] || die "No model mapped for use-case '$2'."
+        # Image use-case routes to ComfyUI.
+        if [ "$(model_field "$mid" runtime)" = "comfyui" ]; then
+            echo "Use-case '$2' is image generation ($mid) — that runs in ComfyUI, not LM Studio."
+            echo "Start it with: distro-ai-image"
+            exit 0
+        fi
+        load_model "$mid"
+        ;;
+    load)
+        [ $# -ge 2 ] || die "Usage: $(basename "$0") load <catalog-id>"
+        load_model "$2"
+        ;;
+    server)
+        need_lms
+        case "${2:-status}" in
+            start) ensure_server; "$LMS" server status ;;
+            stop)  "$LMS" server stop ;;
+            status) "$LMS" server status ;;
+            *) die "Usage: $(basename "$0") server start|stop|status" ;;
+        esac
+        ;;
+    status)
+        need_lms
+        "$LMS" server status 2>/dev/null || true
+        echo "--- loaded models ---"
+        "$LMS" ps 2>/dev/null || echo "(none / lms not running)"
+        ;;
+    unload)
+        need_lms
+        "$LMS" unload --all && echo "Unloaded all models."
+        ;;
+    *)
+        echo "Usage: $(basename "$0") list | use <use-case> [variant] | load <id> | server start|stop|status | status | unload" >&2
+        exit 1
+        ;;
+esac

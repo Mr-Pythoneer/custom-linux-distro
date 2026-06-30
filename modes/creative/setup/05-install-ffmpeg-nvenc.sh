@@ -5,7 +5,7 @@
 # reasons), so this checks the system ffmpeg first and, if it lacks nvenc,
 # fetches BtbN's prebuilt static Linux build (github.com/BtbN/FFmpeg-Builds)
 # which does include it — same "query latest GitHub release" pattern used
-# elsewhere in this repo (see modes/ai/setup/01-install-llamacpp.sh).
+# elsewhere in this repo (see modes/gaming/setup/04-install-proton-ge.sh).
 #
 # Usage: ./05-install-ffmpeg-nvenc.sh [install_dir]
 #   install_dir defaults to /usr/local/bin (symlinked there, not overwriting

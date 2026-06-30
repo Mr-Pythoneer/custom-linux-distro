@@ -108,11 +108,11 @@ bound, so **DDR5 EXPO/XMP must be ON in BIOS** or throughput drops ~3×.
 
 - [ ] `nvidia-smi` lists the 5090 after installing `nvidia-driver-<v>-open` (v ≥ 570) + reboot
 - [ ] `./verify-drivers.sh` passes (driver + microcode + Secure Boot state)
-- [ ] `01-install-llamacpp.sh` compiles against CUDA 12.8+/13.x for sm_120, produces `llama-server`
+- [ ] `01-install-lmstudio.sh` installs LM Studio (llmster + lms CLI); `02-preload-models.sh` pulls the catalog
 - [ ] each preset's `run-*.sh` starts and `nvidia-smi` shows expected VRAM use (`benchmark.sh`)
 - [ ] tune `--n-cpu-moe` per preset to fit 32 GB with KV-cache headroom (no CUDA OOM)
 - [ ] confirm DDR5 EXPO/XMP is on; compare hybrid-preset tok/s with it on vs off
-- [ ] `crucible12@<preset>.service` starts under the service user with `--mlock` actually pinning (check journal for mlock warnings)
-- [ ] `distro-ai-preset switch` tears down the old preset cleanly (no port 8080 / VRAM contention)
+- [ ] `lmstudio.service` (user unit) auto-starts the OpenAI server on :8080; ComfyUI sees the 5090 (`torch.cuda.is_available()`)
+- [ ] `distro-ai-model use <case>` loads + serves on :8080; the 70B loads with `--gpu` partial offload without OOM
 - [ ] `ffmpeg -hide_banner -encoders | grep nvenc` lists h264/hevc/av1_nvenc; a real NVENC encode succeeds
 - [ ] DaVinci Resolve 21.x launches and sees the GPU

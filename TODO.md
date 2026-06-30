@@ -27,14 +27,19 @@ Living checklist for the whole distro. Organized by the same structure as `DESIG
 
 ## 3. AI mode (§5) — `modes/ai/`
 
-- [x] Bash port of all Crucible12 setup/run/benchmark scripts
-- [x] systemd unit template (`crucible12@.service`)
-- [x] `distro-ai-preset` control script
-- [x] OpenCode configs carried over
-- [ ] **(needs hardware)** build verification: `01-install-llamacpp.sh` actually compiles against real CUDA toolkit
-- [ ] **(needs hardware)** each preset starts cleanly, GPU utilization confirmed via `benchmark.sh`
-- [ ] **(needs hardware)** systemd unit permissions/ownership under the `crucible12` service user
-- [ ] **(needs hardware)** preset-switch handoff doesn't race on port 8080 / VRAM release
+**Runtime switched to LM Studio + ComfyUI (2026-06-30)** — the Crucible12/
+llama.cpp port is preserved in `modes/ai/legacy-crucible12/`. See §5 / `modes/ai/README.md`.
+
+- [x] LM Studio headless install (`setup/01-install-lmstudio.sh`, official `curl|bash`)
+- [x] Model catalog + preload (`config/models.catalog.json`, `setup/02-preload-models.sh`) — use-case menu, web-verified repos/quants/sizes
+- [x] `distro-ai-model` use-case switcher (list/use/load/server/status/unload) — replaces `distro-ai-preset`; execution-tested with a **stubbed `lms`** (`tests/test_ai_model.sh`, 15 assertions; never touches a real LM Studio)
+- [x] ComfyUI image-gen subsystem (`setup/03-install-comfyui.sh` w/ PyTorch cu130 for Blackwell, `setup/04-download-image-models.sh` FLUX.1-schnell+SDXL, `bin/distro-ai-image`)
+- [x] User-level systemd units (`systemd/lmstudio.service` on :8080, `systemd/comfyui.service`)
+- [x] OpenCode→LM Studio config (`config/opencode.lmstudio.json`); cloud toggle repointed
+- [x] Legacy Crucible12 port preserved + documented (`legacy-crucible12/`)
+- [ ] **(needs hardware)** LM Studio installs + `lms` CLI works on the box; each catalog model pulls + loads with correct `--gpu` offload
+- [ ] **(needs hardware)** Llama-3.3-70B partial-offload (~6-12 tok/s), vision mmproj loads, ComfyUI sees the 5090, FLUX/SDXL render
+- [ ] **(needs hardware)** `distro-modectl switch ai` auto-loads the use-case model and serves on :8080; thin clients answer
 - [x] Global hotkey assistant overlay (`bin/distro-ai-overlay`, zenity-based, thin client hitting `localhost:8080` via shared `bin/distro-ai-ask`) + best-effort GNOME keybinding wiring (`bin/distro-ai-bind-hotkey`). Request/response plumbing execution-tested against a stub HTTP server (happy path, empty prompt, unreachable server, malformed response shape) — visual rendering still **(needs live desktop)**
 - [x] File-manager "ask AI about this file" context menu action (`integrations/nautilus-ask-ai` + `integrations/install.sh`) — real Nautilus "Scripts" mechanism (`~/.local/share/nautilus/scripts/`, `NAUTILUS_SCRIPT_SELECTED_FILE_PATHS`), not fabricated. Control flow execution-tested with a stubbed `zenity` — menu entry appearing in a real Nautilus session still **(needs live desktop)**
 - [x] Optional Claude-cloud fallback toggle (`distro-ai-cloud-toggle enable|disable|status`) — explicit opt-in, refuses to proceed without the user's own `ANTHROPIC_API_KEY`. Execution-tested all 3 subcommands end to end. The JSON config's env-var interpolation syntax is flagged as an unverified guess (not confirmed against OpenCode's actual schema) — printed as a warning every time `enable` runs, not buried.
@@ -42,7 +47,7 @@ Living checklist for the whole distro. Organized by the same structure as `DESIG
 ## 4. Mode-switcher (§4) — `modes/modectl/`
 
 - [x] `distro-modectl switch <mode>` — CPU governor, power profile, service toggling
-- [x] Wired into `distro-ai-preset`
+- [x] Wired into `distro-ai-model` (LM Studio model switcher; was `distro-ai-preset`)
 - [x] Display-manager-disable confirmation safety + `--yes` flag for non-interactive use
 - [x] Best-effort `PINNED_APPS` dock-pinning via `gsettings` (GNOME-only, runs pre-sudo so it has the user's session bus; desktop-file IDs unverified)
 - [ ] **(needs hardware/VM)** verify `cpupower`/`powerprofilesctl` calls on a real (non-Mac) Linux box — this part doesn't need the GPU server specifically

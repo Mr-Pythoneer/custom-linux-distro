@@ -2,7 +2,7 @@
 #
 # Installs the latest GE-Proton (community Proton build, broader game
 # compatibility than vanilla Proton) into Steam's compatibility tools dir.
-# Same "query latest GitHub release" pattern as modes/ai/setup/01-install-llamacpp.sh.
+# Same "query latest GitHub release" pattern used across this repo (see modes/ai/setup/02-preload-models.sh).
 
 set -euo pipefail
 

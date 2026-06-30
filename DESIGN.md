@@ -85,9 +85,36 @@ Net effect: Creative mode's pitch should be "Resolve + FreeCAD + Blender work gr
 
 ---
 
-## 5. Local AI layer — built around Crucible12
+## 5. Local AI layer — LM Studio + ComfyUI (was Crucible12)
 
-You've already built the actual stack this mode runs: **[Crucible12](https://github.com/Mr-Pythoneer/Crucible12)** — `llama-server` (llama.cpp, CUDA build) hybrid-serving **Qwen3-Coder-Next** (80B/3B-active MoE) across your specific hardware (RTX 5090 32GB + Ryzen 9 9950X3D + 64GB DDR5-6400), fronted by **OpenCode** as the terminal agent, OpenAI-compatible API in between. This is real local-first AI — no API keys, no cloud, no telemetry — which is exactly the "not Copilot slop" bar you set. AI mode's job is to make this the OS's native state, not to build something new alongside it.
+**Runtime change (2026-06-30):** AI mode now runs on **LM Studio** (text +
+vision LLMs) + **ComfyUI** (image generation) instead of the original
+Crucible12/llama.cpp stack. LM Studio is far more turnkey for a desktop distro
+— one official installer, a model catalog, a built-in OpenAI-compatible server
+— and supports the broader model menu (coding / CAD / day-to-day / know-it-all
+/ uncensored / assistant / vision / image). It's still **local-first** (the
+server is 127.0.0.1, no cloud, no keys; LM Studio is free for personal +
+commercial use) — the "not Copilot slop" bar still holds. The original
+Crucible12 port is preserved, not deleted, in `modes/ai/legacy-crucible12/`
+(and the standalone Crucible12 project is unaffected). The implementation,
+the exact model catalog, and the key caveats live in `modes/ai/README.md`.
+
+Key verified facts that shaped the build (researched, not guessed):
+- **LM Studio** installs headless via `curl -fsSL https://lmstudio.ai/install.sh
+  | bash` (llmster daemon + `lms` CLI, no GUI needed); `lms server start --port
+  8080` gives an OpenAI-compatible endpoint on the same port the existing thin
+  clients already use, so `distro-ai-ask`/overlay/nautilus work unchanged.
+- Models are pulled with `lms get <repo>@<quant>` and loaded with `lms load
+  --gpu max|<ratio>`. The new `distro-ai-model` switches by use-case.
+- **Llama-3.3-70B** (~42.5GB Q4) exceeds the 32GB 5090 → partial CPU offload,
+  ~6–12 tok/s; everything else fits fully in VRAM.
+- The requested **Llama-3.2-Vision does NOT work in LM Studio** (llama.cpp has
+  no `mllama` support) → substituted with the verified **Qwen2.5-VL-7B**.
+- **Image generation is ComfyUI, not LM Studio** (LM Studio can't run diffusion
+  models). FLUX.1-dev is gated → default to the no-token FLUX.1-schnell + SDXL.
+
+The original rationale for a local-first coding stack (below) still applies; it
+just runs on LM Studio's engine now instead of a hand-built llama.cpp service.
 
 Currently Crucible12 is Windows-11/PowerShell-native (`01-install-llamacpp.ps1`, `02-download-models.ps1`, `run-crucible.ps1`, etc., targeting CUDA + `nvidia-smi`). Porting work for AI mode:
 
@@ -103,7 +130,16 @@ Optional, explicit opt-in only: a toggle to also route through Claude (cloud) wh
 
 This is the part of the project most worth prototyping first — you already have a working stack, the task is porting + systemd-wrapping it, not inventing it.
 
-**Status: built**, see `modes/ai/`. Bash ports of all setup/run/benchmark scripts, systemd unit template, and `distro-ai-preset` control script. **Not yet run end-to-end — but the RTX 5090 arrives ~late July 2026 and the full build (5090 + 9950X3D) is ready ~early August 2026, so this is weeks out, not months.** All external deps (driver branch ≥570 + open module, CUDA 12.8+/13.x for sm_120, llama.cpp flags, HF model repos) are web-verified — see `docs/blackwell-readiness.md` — but unrun on the real card.
+**Status: built (LM Studio + ComfyUI)**, see `modes/ai/`. Install scripts
+(LM Studio headless, model preload, ComfyUI, image-model download), the
+`distro-ai-model` use-case switcher + `models.catalog.json`, `distro-ai-image`,
+user-level systemd units, and the thin clients (unchanged, on :8080). The
+`distro-ai-model` switcher is execution-tested with a **stubbed `lms`**
+(`tests/test_ai_model.sh`, 15 assertions) — never a real LM Studio. **Not yet
+run on the real card — the RTX 5090 arrives ~late July 2026, full build ~early
+August 2026.** Install method, exact model repos/quants, vision-support, and
+ComfyUI/FLUX facts are all web-verified — see `modes/ai/README.md` and
+`docs/blackwell-readiness.md`.
 
 ---
 

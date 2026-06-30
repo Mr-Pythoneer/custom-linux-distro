@@ -31,7 +31,7 @@ Two hard requirements, verified against Nvidia's docs/forums (mid-2026):
 
 CUDA (for AI mode's llama.cpp build) needs **12.8+** for Blackwell's sm_120 —
 12.8 is the first toolkit with sm_120 support. CUDA 13.x (current in 2026)
-also works; see `modes/ai/setup/01-install-llamacpp.sh` and the
+also works; see `modes/ai/legacy-crucible12/setup/01-install-llamacpp.sh` and the
 Blackwell-readiness notes in `docs/blackwell-readiness.md`.
 
 ## Secure Boot

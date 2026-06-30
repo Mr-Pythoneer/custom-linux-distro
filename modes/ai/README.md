@@ -1,108 +1,106 @@
 # AI mode
 
-Linux/systemd port of [Crucible12](https://github.com/Mr-Pythoneer/Crucible12) — see `DESIGN.md` §5 for the full rationale. Same model, same presets, same hardware-specific tuning (RTX 5090 + Ryzen 9 9950X3D + 64GB DDR5-6400) as the original Windows/PowerShell project. This directory just makes it the OS's native AI mode instead of something the user manually starts in a PowerShell window.
+Local-first AI, built on **LM Studio** (text + vision LLMs) and **ComfyUI**
+(image generation). This replaced the original Crucible12/llama.cpp runtime on
+2026-06-30 — that port is preserved in `legacy-crucible12/`. See DESIGN.md §5.
 
-## What changed vs. the original
+Everything runs **on your own machine** — LM Studio's server is local
+(127.0.0.1), no cloud, no API keys (an optional Claude-cloud toggle exists for
+when you explicitly want it). LM Studio is free for personal and commercial use.
 
-- `setup/*.ps1` → `setup/*.sh` (bash), same flags/defaults, same preset table
-- `01-install-llamacpp`: **builds from source** instead of downloading a prebuilt release. Upstream llama.cpp only ships a prebuilt CUDA binary for Windows — Linux CUDA builds aren't distributed generically because they're coupled to the host's exact toolkit/driver version. This isn't a fallback, it's the correct Linux path.
-- `llama-server` runs as a systemd unit (`systemd/crucible12@.service`, instantiated per preset) instead of a foreground PowerShell process
-- `bin/distro-ai-preset` is the new control surface: `switch <preset>` stops whatever's running and starts the requested preset's unit
-- `config/opencode.*.json` are unchanged — they only point at `localhost:8080`, which is OS-agnostic
+> **All of this is built against web-verified facts (install method, exact
+> model repos/quants, ComfyUI/FLUX) but has NOT been run on the real 5090 yet.**
+> This is the 5090/9950X3D/64GB build. See `docs/blackwell-readiness.md` and
+> `docs/first-hardware-runbook.md`.
 
-## Install (run on the actual GPU machine — NOT this Mac, see DESIGN.md operating constraints)
+## Install (run on the real GPU box, as your normal user — NOT root)
 
 ```bash
-sudo mkdir -p /opt/crucible12 && sudo chown "$USER" /opt/crucible12
-cp -r modes/ai/* /opt/crucible12/
-cd /opt/crucible12
+# Text + vision LLMs (LM Studio)
+./setup/01-install-lmstudio.sh        # headless llmster + lms CLI (curl|bash from lmstudio.ai)
+./setup/02-preload-models.sh          # pull the catalog (~150GB — prints a size warning)
+./setup/05-install-opencode.sh        # optional: OpenCode coding agent on top of LM Studio
 
-./setup/01-install-llamacpp.sh
-./setup/02-download-models.sh crucible      # or max | fast | reasoning | all
-./setup/03-install-opencode.sh
+# Image generation (ComfyUI — separate runtime, LM Studio can't do diffusion)
+./setup/03-install-comfyui.sh         # ComfyUI + PyTorch cu130 (Blackwell)
+./setup/04-download-image-models.sh   # FLUX.1-schnell (no token) + SDXL
 
-sudo useradd -r -s /usr/sbin/nologin crucible12 || true
-sudo chown -R crucible12:crucible12 /opt/crucible12
-sudo cp systemd/crucible12@.service /etc/systemd/system/
-sudo systemctl daemon-reload
-
-sudo cp bin/distro-ai-preset /usr/local/bin/
-sudo chmod +x /usr/local/bin/distro-ai-preset
-
-sudo cp bin/distro-ai-ask bin/distro-ai-overlay bin/distro-ai-bind-hotkey /usr/local/bin/
-sudo chmod +x /usr/local/bin/distro-ai-ask /usr/local/bin/distro-ai-overlay /usr/local/bin/distro-ai-bind-hotkey
-distro-ai-bind-hotkey                       # binds <Super>space, run as the desktop user (not sudo)
-/opt/crucible12/integrations/install.sh     # installs the Nautilus "ask AI about this file" script
-
-distro-ai-preset switch crucible
-distro-ai-preset status
+# Auto-start the LM Studio server on login (port 8080):
+mkdir -p ~/.config/systemd/user
+cp systemd/lmstudio.service ~/.config/systemd/user/
+systemctl --user daemon-reload && systemctl --user enable --now lmstudio.service
 ```
 
-Then, per-project:
+Then load a model and use it:
+
 ```bash
-cp /opt/crucible12/config/opencode.crucible.json ./opencode.json
-opencode
+distro-ai-model use coding      # loads Qwen2.5-Coder-32B, server on :8080
+distro-ai-ask "explain this regex"
+distro-ai-image                 # opens ComfyUI for image gen (port 8188)
 ```
 
-## Hotkey overlay + file-manager integration
+## The model menu (config/models.catalog.json)
 
-Both are thin clients on top of whatever preset is already running on
-`localhost:8080` — `bin/distro-ai-ask` is the shared backend (one `curl`
-call, OpenAI-compatible chat-completions shape), execution-tested against a
-stub server covering the happy path, empty-prompt rejection, unreachable-server,
-and malformed-response-shape cases.
+The OpenAI-compatible server runs on **port 8080** (`lms server start --port
+8080`), so the existing thin clients keep working unchanged. Switch by use-case:
 
-- `bin/distro-ai-overlay` — `zenity`-based prompt/reply dialog, meant to be
-  bound to a global keyboard shortcut. `bin/distro-ai-bind-hotkey [binding]`
-  wires it to `<Super>space` by default via the documented GNOME
-  `org.gnome.settings-daemon.plugins.media-keys` custom-keybinding
-  relocatable-schema mechanism — same best-effort-but-undocumented-on-real-hardware
-  caveat as `modes/modectl`'s `PINNED_APPS` dock pinning. Run it as the
-  desktop user in their session, not via sudo.
-- `integrations/nautilus-ask-ai` + `integrations/install.sh` — a real
-  Nautilus (GNOME Files) "Scripts" entry, not a fabricated context-menu
-  config. Nautilus's actual mechanism: any executable dropped into
-  `~/.local/share/nautilus/scripts/` shows up under right-click → Scripts
-  automatically, with the selected file's path passed via
-  `NAUTILUS_SCRIPT_SELECTED_FILE_PATHS`. Reads the first 4KB of the selected
-  file, asks the local model to describe it. `install.sh` does the one-line
-  copy-and-chmod into place.
+| Use-case | Best | Fast/alt |
+|---|---|---|
+| `coding` | Qwen2.5-Coder-32B | Qwen2.5-Coder-7B |
+| `cad` | Qwen2.5-Coder-32B | DeepSeek-Coder-V2-Lite 16B |
+| `day-to-day` | Llama-3.3-70B¹ | Qwen2.5-14B / Llama-3.2-3B |
+| `know-it-all` | Llama-3.3-70B¹ | |
+| `uncensored` | Dolphin 2.9 Llama-3 8B | Dolphin 2.7 Mixtral 8x7B |
+| `assistant` | Llama-3.2-3B | Qwen2.5-7B |
+| `vision` | Qwen2.5-VL-32B | Qwen2.5-VL-7B² |
+| `image` (ComfyUI) | FLUX.1-dev³ | SDXL |
 
-Both **need a live GNOME session to verify the dialogs/menu entry actually
-render** — that part is unverified, consistent with every other live-desktop
-caveat in this repo. The request/response plumbing itself (`distro-ai-ask`,
-and `nautilus-ask-ai`'s file-reading/error-handling control flow) has been
-execution-tested with bash 5 against a stub HTTP server and a stubbed
-`zenity`, not just syntax-checked.
+`distro-ai-model list | use <case> [variant] | load <id> | server start|stop |
+status | unload`.
 
-## Optional cloud fallback (explicit opt-in only)
+**Verified caveats (the reason this was researched, not guessed):**
+- ¹ **Llama-3.3-70B** at Q4_K_M is ~42.5GB — it does NOT fit the 32GB 5090, so
+  it loads with partial CPU offload (`--gpu 0.8`) to the 64GB RAM. Realistic
+  **~6–12 tok/s** (the often-cited 15–20 needs a smaller quant). Everything else
+  fits fully in VRAM.
+- ² The requested **`llama3.2-vision:11b` does NOT work in LM Studio** —
+  llama.cpp never implemented its `mllama` architecture (loads fail with
+  "unknown model architecture: mllama"). The verified substitute is
+  **Qwen2.5-VL-7B** (same family, fully supported). `qwen2.5-vl:32b` works but
+  needs its `mmproj` vision file alongside (`lms get` pulls it).
+- ³ **FLUX.1-dev is gated** (HF license + token). The installer defaults to the
+  Apache-2.0 **FLUX.1-schnell** (no token); pass `HF_TOKEN=… --flux-dev` for dev.
+- **Image generation runs in ComfyUI, not LM Studio** (LM Studio has no local
+  diffusion). It has its own web UI/API on port 8188 — `distro-ai-image` launches it.
+- Full preload of everything (LLMs + image models) is **~190–210GB** on disk.
 
-`bin/distro-ai-cloud-toggle enable` switches the current project's OpenCode
-config to route through Claude (cloud) instead of a local preset — for when
-you want a stronger model and have connectivity, per DESIGN.md §5's
-"explicit opt-in, never silently substituted in" stance (same principle as
-OpenClaw's gateway). Requires you to set `ANTHROPIC_API_KEY` yourself; the
-script refuses to proceed without it rather than failing silently later.
+## Thin clients (unchanged — they hit :8080)
 
-`config/opencode.claude-cloud.json`'s env-var interpolation syntax
-(`"{env:ANTHROPIC_API_KEY}"`) is **OpenCode's documented mechanism** —
-[OpenCode's config docs](https://opencode.ai/docs/config/) state "Use
-`{env:VARIABLE_NAME}` to substitute environment variables," with
-`"apiKey": "{env:ANTHROPIC_API_KEY}"` given as an example, and
-`"npm": "@ai-sdk/anthropic"` is the correct provider package per the
-models.dev registry OpenCode reads. (This was previously flagged as an
-unverified guess; a web-verification pass confirmed it, so the caveat is
-removed.) The one genuinely unverified part left is whether the literal
-model id `claude-sonnet-4-6` is currently served — OpenCode accepts any
-string as a model key, so it only matters at request time, not config-parse
-time.
+- `bin/distro-ai-ask` — shared OpenAI-compatible backend (one curl call).
+- `bin/distro-ai-overlay` + `bin/distro-ai-bind-hotkey` — zenity prompt bound to
+  `<Super>space`.
+- `integrations/nautilus-ask-ai` — "ask AI about this file" Nautilus script.
+- These need a model loaded first (`distro-ai-model use <case>`) and a live
+  GNOME session to render — execution-tested against a stub server, not a real
+  desktop.
 
-## Status
+## Optional cloud fallback (explicit opt-in)
 
-Ported but **not yet run end-to-end** — built without access to the target GPU hardware. **The RTX 5090 is arriving ~late July 2026, with the full build (5090 + 9950X3D) ready ~early August 2026** — so this is weeks from being testable, not months. Every external dependency here has been web-verified (driver branch, CUDA version, llama.cpp flags, HF model repos — see [Blackwell readiness](../../docs/blackwell-readiness.md)), but nothing has run on the real card. Needs verification once it's built:
-- [ ] `01-install-llamacpp.sh` actually builds successfully against CUDA 12.8+ for sm_120
-- [ ] Each preset's `run-*.sh` starts cleanly and `nvidia-smi` shows expected GPU utilization (use `benchmark.sh`)
-- [ ] systemd unit (`crucible12@<preset>.service`) starts/stops correctly under the `crucible12` service user, with correct file permissions on `/opt/crucible12/models` and `/opt/crucible12/bin`
-- [ ] `distro-ai-preset switch` correctly tears down the old preset before starting the new one (watch for port 8080 conflicts if the stop doesn't fully release before the start)
+`bin/distro-ai-cloud-toggle enable` swaps the project's OpenCode config to route
+through Claude (cloud) — for when you want a stronger model and have
+connectivity. Requires your own `ANTHROPIC_API_KEY`. `config/opencode.lmstudio.json`
+is the local (LM Studio :8080) counterpart. Per DESIGN.md §5, cloud is never the
+silent default.
 
-Do this verification on the GPU server, not a laptop — don't leave downloaded model weights or build artifacts sitting on local disk anywhere they don't need to be.
+## Status — needs the 5090
+
+- [ ] `01-install-lmstudio.sh` actually installs llmster + lms CLI on the box
+- [ ] `02-preload-models.sh` pulls the catalog; each model loads with the right
+      `--gpu` offload (`--estimate-only` to tune the 70B ratio)
+- [ ] `distro-ai-model use <case>` loads + serves on :8080; thin clients answer
+- [ ] vision: `qwen2.5-vl:32b` loads its mmproj and accepts an image
+- [ ] ComfyUI: PyTorch sees the 5090 (`torch.cuda.is_available()`), FLUX/SDXL render
+- [ ] `lmstudio.service` user unit auto-starts the server on login
+
+The `distro-ai-model` switcher + catalog are execution-tested with a **stubbed
+`lms`** (15 assertions, `tests/test_ai_model.sh`) — never against a real LM Studio.

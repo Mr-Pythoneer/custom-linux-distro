@@ -7,8 +7,8 @@
 # What this script actually does per switch:
 #   - sets CPU governor (cpupower) and power profile (powerprofilesctl)
 #   - enables/disables/starts/stops the profile's service list
-#   - stops the running Crucible12 AI preset if the target profile says to
-#     (STOP_AI_PRESET=true), or starts one if entering AI mode (AI_AUTOSTART_PRESET)
+#   - loads/unloads the LM Studio model for AI mode (AI_AUTOSTART_USECASE),
+#     or unloads it when leaving to another mode (STOP_AI_MODEL=true)
 #   - asks for explicit confirmation before disabling a display manager
 #     (CONFIRM_DISPLAY_MANAGER_STOP=true) since that can kill an active desktop session
 #   - pinning PINNED_APPS to the GNOME favorite-apps dock (best-effort,
@@ -129,21 +129,22 @@ apply_services() {
     done
 }
 
-stop_ai_preset() {
-    if command -v distro-ai-preset >/dev/null 2>&1; then
-        distro-ai-preset stop || true
+# AI-model handling runs as the USER (LM Studio lives in ~/.lmstudio, never
+# root), so this is called BEFORE the sudo re-exec and is a NO-OP on the root
+# pass (guarded by id != 0). Best-effort: a failure warns but never aborts the
+# mode switch (the system settings still apply).
+apply_ai_model() {
+    [ "$(id -u)" -eq 0 ] && return 0   # root re-exec pass: skip, this is user-level
+    if [ "${STOP_AI_MODEL:-false}" = "true" ]; then
+        command -v distro-ai-model >/dev/null 2>&1 && distro-ai-model unload >/dev/null 2>&1 || true
     fi
-}
-
-start_ai_preset() {
-    local preset="$1"
-    if command -v distro-ai-preset >/dev/null 2>&1; then
-        distro-ai-preset switch "$preset" || {
-            echo "WARNING: distro-ai-preset failed to start preset '$preset' — CPU/power/services are already set to this mode, but the AI server is NOT running. Check: journalctl -u crucible12@${preset}.service" >&2
-            return 1
-        }
-    else
-        echo "WARNING: distro-ai-preset not found — install modes/ai/bin/distro-ai-preset first to actually start the model server." >&2
+    if [ -n "${AI_AUTOSTART_USECASE:-}" ]; then
+        if command -v distro-ai-model >/dev/null 2>&1; then
+            distro-ai-model use "$AI_AUTOSTART_USECASE" \
+                || echo "WARNING: distro-ai-model failed to load the '$AI_AUTOSTART_USECASE' model — the mode still switched, but no model is loaded. Check: distro-ai-model status" >&2
+        else
+            echo "WARNING: distro-ai-model not found — install modes/ai/bin/distro-ai-model (and run modes/ai/setup/) to auto-load a model in AI mode." >&2
+        fi
     fi
 }
 
@@ -202,8 +203,10 @@ do_switch() {
     fi
 
     # Run before the sudo re-exec below: gsettings needs the invoking user's
-    # own session bus, not root's.
+    # own session bus, and LM Studio (distro-ai-model) is per-user, not root's.
+    # Both are no-ops / skipped on the root re-exec pass.
     apply_pinned_apps PINNED_APPS
+    apply_ai_model
 
     require_root_for switch "$mode"
 
@@ -212,26 +215,10 @@ do_switch() {
     apply_gpu_perf "${GPU_PERF:-auto}"
     apply_services ENABLE_SERVICES DISABLE_SERVICES
 
-    if [ "${STOP_AI_PRESET:-false}" = "true" ]; then
-        stop_ai_preset
-    fi
-    # A failed AI-preset start must NOT abort before STATE_FILE is written —
-    # otherwise governor/power/services are already switched but `status` would
-    # still report the previous mode. Record state regardless, then exit
-    # non-zero at the end so the caller still sees the failure.
-    ai_start_ok=true
-    if [ -n "${AI_AUTOSTART_PRESET:-}" ]; then
-        start_ai_preset "$AI_AUTOSTART_PRESET" || ai_start_ok=false
-    fi
-
     mkdir -p "$(dirname "$STATE_FILE")"
     echo "$mode" > "$STATE_FILE"
 
     echo "Now in: $MODE_NAME mode"
-    if [ "$ai_start_ok" != "true" ]; then
-        echo "Mode reconfigured, but the AI preset did not start — see warning above." >&2
-        exit 1
-    fi
 }
 
 do_status() {

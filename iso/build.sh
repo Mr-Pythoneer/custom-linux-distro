@@ -94,7 +94,12 @@ rsync -a --delete "$REPO_ROOT/modes" "$REPO_ROOT/drivers" "$INCLUDES/opt/distro/
 # own location (see modes/modectl/distro-modectl's PROFILE_DIR), so it must
 # stay next to that directory rather than be flattened into /usr/local/bin.
 ln -sf /opt/distro/modes/modectl/distro-modectl "$INCLUDES/usr/local/bin/distro-modectl"
-ln -sf /opt/distro/modes/ai/bin/distro-ai-preset "$INCLUDES/usr/local/bin/distro-ai-preset"
+# AI-mode CLIs (LM Studio model switcher + ComfyUI image launcher). The thin
+# clients (distro-ai-ask/overlay/cloud-toggle) are picked up by the find-chmod
+# below; symlink the ones users invoke directly into PATH.
+for aibin in distro-ai-model distro-ai-image distro-ai-ask distro-ai-overlay distro-ai-cloud-toggle distro-ai-bind-hotkey; do
+    ln -sf "/opt/distro/modes/ai/bin/$aibin" "$INCLUDES/usr/local/bin/$aibin"
+done
 find "$INCLUDES/opt/distro" -type f \( -name "*.sh" -o -name "distro-*" \) -exec chmod +x {} +
 
 echo -e "\033[36mConfiguring live-build...\033[0m"

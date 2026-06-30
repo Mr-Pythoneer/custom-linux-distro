@@ -1,0 +1,24 @@
+# Crucible OS — ComfyUI image-generation server on port 8188 (optional).
+#
+# USER service. Install:
+#   mkdir -p ~/.config/systemd/user
+#   cp comfyui.service ~/.config/systemd/user/
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now comfyui.service
+#
+# Adjust WorkingDirectory/ExecStart if you installed ComfyUI somewhere other
+# than ~/ComfyUI. %h expands to the user's home dir.
+
+[Unit]
+Description=Crucible OS — ComfyUI image generation (port 8188)
+After=default.target
+
+[Service]
+Type=simple
+WorkingDirectory=%h/ComfyUI
+ExecStart=%h/ComfyUI/venv/bin/python main.py --port 8188
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=default.target

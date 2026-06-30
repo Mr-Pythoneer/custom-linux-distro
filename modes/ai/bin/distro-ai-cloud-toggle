@@ -7,10 +7,9 @@
 # user provides themselves, same OpenClaw-gateway principle of "the user's
 # own choice, not a forced background service."
 #
-# This does NOT manage a systemd unit like distro-ai-preset does -- there's
-# no local server to start for a cloud provider, it's purely an OpenCode
-# config swap plus an explicit acknowledgment that requests leave the
-# device.
+# This does NOT start a local server (that's distro-ai-model / LM Studio) --
+# it's purely an OpenCode config swap plus an explicit acknowledgment that
+# requests leave the device.
 #
 # Usage:
 #   distro-ai-cloud-toggle enable    -- copies the cloud config to ./opencode.json
@@ -48,8 +47,8 @@ EOF
         ;;
     disable)
         echo "No state to tear down here (this script doesn't run a service)."
-        echo "To go back to a local preset: cp $SCRIPT_DIR/../config/opencode.crucible.json $TARGET"
-        echo "(and make sure a local preset is running: distro-ai-preset switch crucible)"
+        echo "To go back to the local model: cp $SCRIPT_DIR/../config/opencode.lmstudio.json $TARGET"
+        echo "(and make sure a local model is loaded: distro-ai-model use coding)"
         ;;
     status)
         if [ -f "$TARGET" ] && grep -q "claude-cloud" "$TARGET" 2>/dev/null; then

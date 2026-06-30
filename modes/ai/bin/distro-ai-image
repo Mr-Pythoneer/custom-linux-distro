@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+#
+# Starts/stops ComfyUI (AI mode's image-generation runtime) and opens its web
+# UI. ComfyUI is a node/workflow tool with its own browser UI + HTTP API on
+# port 8188 — image generation is inherently a visual/workflow task, so this
+# launches the UI rather than pretending to be a one-shot CLI generator.
+# (Programmatic generation is possible via ComfyUI's /prompt API with a saved
+# workflow JSON — out of scope for this launcher.)
+#
+# Run as the desktop user.
+#
+# Usage: distro-ai-image [start|stop|status|open]   (default: start)
+
+set -euo pipefail
+
+COMFY_DIR="${COMFYUI_DIR:-$HOME/ComfyUI}"
+PORT=8188
+PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/crucible-comfyui.pid"
+
+is_running() {
+    if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then return 0; fi
+    # also detect a ComfyUI already serving on the port
+    curl -fsS --max-time 2 -o /dev/null "http://127.0.0.1:$PORT/" 2>/dev/null
+}
+
+open_ui() {
+    local url="http://127.0.0.1:$PORT/"
+    if command -v xdg-open >/dev/null 2>&1; then xdg-open "$url" >/dev/null 2>&1 || true
+    else echo "Open $url in your browser."; fi
+}
+
+case "${1:-start}" in
+    start)
+        [ -f "$COMFY_DIR/main.py" ] || { echo "ComfyUI not found at $COMFY_DIR — run modes/ai/setup/03-install-comfyui.sh first." >&2; exit 1; }
+        if is_running; then
+            echo "ComfyUI already running on port $PORT."
+        else
+            echo "Starting ComfyUI on port $PORT ..."
+            ( cd "$COMFY_DIR" && nohup ./venv/bin/python main.py --port "$PORT" >"${XDG_RUNTIME_DIR:-/tmp}/crucible-comfyui.log" 2>&1 & echo $! > "$PIDFILE" )
+            sleep 2
+        fi
+        open_ui
+        echo "Logs: ${XDG_RUNTIME_DIR:-/tmp}/crucible-comfyui.log"
+        ;;
+    stop)
+        if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then
+            kill "$(cat "$PIDFILE")" && rm -f "$PIDFILE" && echo "Stopped ComfyUI."
+        else
+            echo "No ComfyUI process tracked (PID file $PIDFILE). If it's running under systemd or another shell, stop it there." >&2
+        fi
+        ;;
+    status)
+        if is_running; then echo "ComfyUI: running on http://127.0.0.1:$PORT/"; else echo "ComfyUI: not running"; fi
+        ;;
+    open)
+        open_ui
+        ;;
+    *)
+        echo "Usage: $(basename "$0") start|stop|status|open" >&2
+        exit 1
+        ;;
+esac
