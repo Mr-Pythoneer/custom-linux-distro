@@ -33,6 +33,10 @@ docs/                landing page + first-hardware-runbook.md + blackwell-readin
 - **Modes** (`modes/modectl/`) are a runtime switch — `distro-modectl switch gaming` — on one install. Every mode is available regardless of strain.
 - **Strains** (`iso/strains/`) are a build-time hardware-class profile — what desktop environment (if any) and what packages ship by default. See `DESIGN.md` §5b for why this is bounded to x86_64 package/DE variants, not "every computer that might exist."
 
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the working norms — chiefly: verify external facts against primary sources, flag what's unverified, and add a `tests/` case for new pure-logic scripts. Run `./tests/run.sh` and `shellcheck` before pushing. After an install, `./verify-all.sh` runs every mode's sanity check in one pass.
+
 ## License
 
 MIT — see [LICENSE](LICENSE). [NOTICE](NOTICE) credits the upstream projects this distro builds on without vendoring or forking.
