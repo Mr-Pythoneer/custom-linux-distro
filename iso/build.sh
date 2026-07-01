@@ -101,6 +101,7 @@ declare -A DISTRO_BINS=(
     [distro-ai-model]=modes/ai/bin        [distro-ai-image]=modes/ai/bin
     [distro-ai-ask]=modes/ai/bin          [distro-ai-overlay]=modes/ai/bin
     [distro-ai-cloud-toggle]=modes/ai/bin [distro-ai-bind-hotkey]=modes/ai/bin
+    [distro-ai-detect-tier]=modes/ai/bin
     [distro-gaming-compat]=modes/gaming/bin
     [distro-creative-scratch]=modes/creative/bin [distro-creative-color]=modes/creative/bin
 )

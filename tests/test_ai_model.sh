@@ -5,7 +5,10 @@
 . "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
 AIM="$REPO_ROOT/modes/ai/bin/distro-ai-model"
-CATALOG="$REPO_ROOT/modes/ai/config/models.catalog.json"
+# Tiered now: the former models.catalog.json is the 'max' tier. Pin the tier so
+# resolution is deterministic regardless of any ~/.config on the host.
+export CRUCIBLE_AI_TIER=max
+CATALOG="$REPO_ROOT/modes/ai/config/models.catalog.max.json"
 
 if ! command -v python3 >/dev/null 2>&1; then note "skipping (need python3)"; finish; exit $?; fi
 
@@ -52,7 +55,7 @@ assert_contains "list shows the image/ComfyUI tag" "$out" "ComfyUI"
 # use coding -> loads the right repo with --gpu max via the stub
 out="$(run_aim use coding 2>&1)"; rc=$?
 assert_eq "use coding exits 0" "0" "$rc"
-assert_contains "use coding loads the 32B coder repo" "$out" "lmstudio-community/Qwen2.5-Coder-32B-Instruct-GGUF"
+assert_contains "use coding loads the 32B coder repo" "$out" "bartowski/Qwen2.5-Coder-32B-Instruct-GGUF"
 assert_contains "use coding passes --gpu max" "$out" "--gpu max"
 assert_contains "use coding sets the identifier" "$out" "--identifier qwen2.5-coder-32b"
 

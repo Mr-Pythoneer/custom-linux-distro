@@ -21,7 +21,7 @@
   "models": {
     "qwen2.5-coder-32b": {
       "name": "Qwen2.5-Coder-32B-Instruct", "runtime": "lmstudio",
-      "repo": "lmstudio-community/Qwen2.5-Coder-32B-Instruct-GGUF", "quant": "Q4_K_M",
+      "repo": "bartowski/Qwen2.5-Coder-32B-Instruct-GGUF", "quant": "Q4_K_M",
       "size_gb": 19.9, "gpu": "max", "context": 16384, "vision": false,
       "note": "Best coding/CAD model; fits fully in 32GB VRAM. Q6_K (26.9GB) also fits if you want higher quality."
     },

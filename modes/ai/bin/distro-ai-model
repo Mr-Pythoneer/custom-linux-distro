@@ -24,7 +24,14 @@ set -euo pipefail
 # symlinks) so paths relative to the real script dir resolve correctly.
 SELF="${BASH_SOURCE[0]}"; [ -L "$SELF" ] && SELF="$(readlink "$SELF")"
 SCRIPT_DIR="$(cd "$(dirname "$SELF")" && pwd)"
-CATALOG="$SCRIPT_DIR/../config/models.catalog.json"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/crucible-ai"
+# Active AI-model tier (cpu/entry/mid/high/max) and laptop power profile
+# (efficiency/balance/power). distro-ai-detect-tier writes these into
+# $CONFIG_HOME; override via env. Default tier=max (the 5090 build), balance.
+TIER="${CRUCIBLE_AI_TIER:-$(cat "$CONFIG_HOME/tier" 2>/dev/null || echo max)}"
+PROFILE="${CRUCIBLE_AI_PROFILE:-$(cat "$CONFIG_HOME/profile" 2>/dev/null || echo balance)}"
+CATALOG="$SCRIPT_DIR/../config/models.catalog.$TIER.json"
+[ -f "$CATALOG" ] || CATALOG="$SCRIPT_DIR/../config/models.catalog.max.json"
 PORT=8080
 LMS="$HOME/.lmstudio/bin/lms"
 [ -x "$LMS" ] || LMS="$(command -v lms 2>/dev/null || echo "$HOME/.lmstudio/bin/lms")"
@@ -37,7 +44,7 @@ need_lms() { [ -x "$LMS" ] || die "lms CLI not found ($LMS) — run modes/ai/set
 
 # catalog_query <python-expr-printing-output> — runs a python snippet with the
 # catalog loaded as `cat`. Args after the snippet are sys.argv[1:].
-catalog_py() { CATALOG="$CATALOG" python3 -c "$1" "${@:2}"; }
+catalog_py() { CATALOG="$CATALOG" PROFILE="$PROFILE" python3 -c "$1" "${@:2}"; }
 
 resolve_usecase_model() {  # <usecase> [variant] -> prints catalog id
     catalog_py '
@@ -52,7 +59,13 @@ if variant:
         have = [k for k in uc if k not in ("label", "runtime")]
         print("error: use-case {} has no variant {} (have: {})".format(uc_name, variant, have), file=sys.stderr); sys.exit(2)
 else:
-    mid = uc.get("best") or next((v for k,v in uc.items() if k not in ("label","runtime")), None)
+    # No explicit variant: pick by laptop power profile. power -> best;
+    # balance -> balanced then best; efficiency -> fast/smallest then best.
+    prof = os.environ.get("PROFILE", "balance")
+    order = {"power": ["best"], "balance": ["balanced", "best"],
+             "efficiency": ["fast", "balanced", "best"]}.get(prof, ["balanced", "best"])
+    mid = next((uc[k] for k in order if uc.get(k)), None) \
+          or next((v for k, v in uc.items() if k not in ("label", "runtime")), None)
 print(mid)
 ' "$@"
 }
@@ -99,6 +112,9 @@ load_model() {  # <catalog-id>
 
 case "${1:-}" in
     list)
+        echo "Active tier: $TIER   profile: $PROFILE   (catalog: $(basename "$CATALOG"))"
+        echo "Tiers: cpu entry mid high max  ·  set via distro-ai-detect-tier or \$CRUCIBLE_AI_TIER"
+        echo ""
         catalog_py '
 import json, os
 cat = json.load(open(os.environ["CATALOG"]))
@@ -142,6 +158,7 @@ for mid, m in cat["models"].items():
         ;;
     status)
         need_lms
+        echo "Active tier: $TIER   profile: $PROFILE   (catalog: $(basename "$CATALOG"))"
         "$LMS" server status 2>/dev/null || true
         echo "--- loaded models ---"
         "$LMS" ps 2>/dev/null || echo "(none / lms not running)"

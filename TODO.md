@@ -31,9 +31,10 @@ Living checklist for the whole distro. Organized by the same structure as `DESIG
 llama.cpp port is preserved in `modes/ai/legacy-crucible12/`. See §5 / `modes/ai/README.md`.
 
 - [x] LM Studio headless install (`setup/01-install-lmstudio.sh`, official `curl|bash`)
-- [x] Model catalog + preload (`config/models.catalog.json`, `setup/02-preload-models.sh`) — use-case menu, web-verified repos/quants/sizes
-- [x] `distro-ai-model` use-case switcher (list/use/load/server/status/unload) — replaces `distro-ai-preset`; execution-tested with a **stubbed `lms`** (`tests/test_ai_model.sh`, 15 assertions; never touches a real LM Studio)
-- [x] ComfyUI image-gen subsystem (`setup/03-install-comfyui.sh` w/ PyTorch cu130 for Blackwell, `setup/04-download-image-models.sh` FLUX.1-schnell+SDXL, `bin/distro-ai-image`)
+- [x] **Tiered model catalogs (2026-07-01)** — five `config/models.catalog.<tier>.json` (`cpu`/`entry`/`mid`/`high`/`max`) of web-verified quantized GGUF models sized per VRAM, so every hardware variant preloads local AIs that fit. `setup/02-preload-models.sh` auto-reads the detected tier (or `--tier X`).
+- [x] **Hardware auto-detect** (`bin/distro-ai-detect-tier`) — VRAM (Nvidia `nvidia-smi` / AMD-APU sysfs) + RAM + laptop-vs-desktop → tier; laptop power profile (efficiency/balance/power); image-gen opt-in. Writes `~/.config/crucible-ai/{tier,profile,image}`. Hermetically tested with injected hardware inputs (`tests/test_detect_tier.sh`, 34 assertions; never touches a real GPU).
+- [x] `distro-ai-model` use-case switcher (list/use/load/server/status/unload) — replaces `distro-ai-preset`; tier/profile-aware; execution-tested with a **stubbed `lms`** (`tests/test_ai_model.sh`, 15 assertions; never touches a real LM Studio)
+- [x] ComfyUI image-gen subsystem (`setup/03-install-comfyui.sh` w/ PyTorch cu130 for Blackwell, `setup/04-download-image-models.sh` FLUX.1-schnell+SDXL, now with `--from-config` to fetch only the image model the user picked at detect time, `bin/distro-ai-image`)
 - [x] User-level systemd units (`systemd/lmstudio.service` on :8080, `systemd/comfyui.service`)
 - [x] OpenCode→LM Studio config (`config/opencode.lmstudio.json`); cloud toggle repointed
 - [x] Legacy Crucible12 port preserved + documented (`legacy-crucible12/`)

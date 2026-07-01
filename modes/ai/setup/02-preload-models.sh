@@ -1,17 +1,18 @@
 #!/usr/bin/env bash
 #
-# Preloads the AI-mode LLM/vision models from config/models.catalog.json via
-# `lms get`. Image-generation models (FLUX/SDXL) are NOT here — those run in
-# ComfyUI, see 04-download-image-models.sh.
+# Preloads the AI-mode LLM/vision models for a hardware TIER via `lms get`.
+# Image-generation models (FLUX/SDXL) are NOT here — those run in ComfyUI, see
+# 04-download-image-models.sh.
 #
-# Default: pull ALL LM Studio models in the catalog (~150GB — the catalog is
-# the 5090 'max' tier). Pass a space-separated list of catalog ids, or a single
-# use-case, to pull a subset.
+# The tier (cpu/entry/mid/high/max) selects which catalog to pull from. It comes
+# from --tier, else $CRUCIBLE_AI_TIER, else ~/.config/crucible-ai/tier (written
+# by distro-ai-detect-tier), else 'max'. Default pulls ALL of the tier's models.
 #
 # Usage:
-#   ./02-preload-models.sh                         # ALL lmstudio models (~150GB)
-#   ./02-preload-models.sh coding                  # just the models for the 'coding' use-case
-#   ./02-preload-models.sh qwen2.5-coder-32b llama3.2-3b   # specific catalog ids
+#   ./02-preload-models.sh                     # ALL models for the active tier
+#   ./02-preload-models.sh --tier entry        # ALL models for the entry tier
+#   ./02-preload-models.sh coding              # just the 'coding' use-case (active tier)
+#   ./02-preload-models.sh --tier mid coding   # 'coding' use-case for the mid tier
 
 set -euo pipefail
 
@@ -21,11 +22,18 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CATALOG="$SCRIPT_DIR/../config/models.catalog.json"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/crucible-ai"
+
+# --tier <t> may lead the args; otherwise fall back to env/config/default.
+TIER=""
+if [ "${1:-}" = "--tier" ]; then TIER="${2:-}"; shift 2; fi
+[ -n "$TIER" ] || TIER="${CRUCIBLE_AI_TIER:-$(cat "$CONFIG_HOME/tier" 2>/dev/null || echo max)}"
+CATALOG="$SCRIPT_DIR/../config/models.catalog.$TIER.json"
+[ -f "$CATALOG" ] || { echo "No catalog for tier '$TIER' ($CATALOG). Tiers: cpu entry mid high max." >&2; exit 1; }
+echo "Tier: $TIER  ($CATALOG)"
 LMS="$HOME/.lmstudio/bin/lms"
 command -v "$LMS" >/dev/null 2>&1 || LMS="$(command -v lms || echo "$LMS")"
 
-[ -f "$CATALOG" ] || { echo "Catalog not found: $CATALOG" >&2; exit 1; }
 [ -x "$LMS" ] || { echo "lms CLI not found ($LMS) — run 01-install-lmstudio.sh first." >&2; exit 1; }
 command -v python3 >/dev/null 2>&1 || { echo "python3 required to read the catalog." >&2; exit 1; }
 

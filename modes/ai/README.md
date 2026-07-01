@@ -16,20 +16,44 @@ when you explicitly want it). LM Studio is free for personal and commercial use.
 ## Install (run on the real GPU box, as your normal user — NOT root)
 
 ```bash
-# Text + vision LLMs (LM Studio)
+# 0) Detect the hardware tier (VRAM/RAM/laptop), pick laptop profile + image model
+distro-ai-detect-tier                 # writes ~/.config/crucible-ai/{tier,profile,image}
+                                      # (--yes = defaults, --print = preview, --tier X = force)
+
+# Text + vision LLMs (LM Studio) — 02 auto-reads the detected tier
 ./setup/01-install-lmstudio.sh        # headless llmster + lms CLI (curl|bash from lmstudio.ai)
-./setup/02-preload-models.sh          # pull the catalog (~150GB — prints a size warning)
+./setup/02-preload-models.sh          # pull the *tier's* catalog (prints a size warning)
 ./setup/05-install-opencode.sh        # optional: OpenCode coding agent on top of LM Studio
 
 # Image generation (ComfyUI — separate runtime, LM Studio can't do diffusion)
 ./setup/03-install-comfyui.sh         # ComfyUI + PyTorch cu130 (Blackwell)
-./setup/04-download-image-models.sh   # FLUX.1-schnell (no token) + SDXL
+./setup/04-download-image-models.sh --from-config   # only the image model you picked
 
 # Auto-start the LM Studio server on login (port 8080):
 mkdir -p ~/.config/systemd/user
 cp systemd/lmstudio.service ~/.config/systemd/user/
 systemctl --user daemon-reload && systemctl --user enable --now lmstudio.service
 ```
+
+### Hardware tiers (so every machine preloads models that fit it)
+
+`distro-ai-detect-tier` reads VRAM (Nvidia via `nvidia-smi`, AMD/APU via sysfs),
+RAM, and laptop-vs-desktop, then maps VRAM → a tier. Each tier has its own
+`config/models.catalog.<tier>.json` of **quantized** GGUF models sized to fit:
+
+| Tier | VRAM (GiB) | Example cards | LLM ceiling | Image |
+|---|---|---|---|---|
+| `cpu` | none / iGPU | APUs, no dGPU | ≤3B (CPU) | none |
+| `entry` | 5–11 | GTX 1660, RTX 3050/3060 | 7–8B | SDXL |
+| `mid` | 11–20 | RTX 3060 12G, 4060 Ti 16G, 4070 | 14B (+16B MoE) | SDXL / FLUX.1-schnell |
+| `high` | 20–30 | RTX 3090/4090, 7900 XTX | 32B | FLUX.1-dev |
+| `max` | ≥30 | RTX 5090 | 70B (partial offload) | FLUX.1-dev |
+
+On a **laptop** you also pick a power **profile** — `efficiency` (fast/small
+models, least battery) / `balance` / `power` (same as a desktop). The profile
+decides which variant `distro-ai-model use <case>` loads by default; desktops
+default to `power`. Override anything: `CRUCIBLE_AI_TIER=mid`,
+`CRUCIBLE_AI_PROFILE=efficiency`, or `distro-ai-detect-tier --tier high`.
 
 Then load a model and use it:
 
@@ -39,12 +63,15 @@ distro-ai-ask "explain this regex"
 distro-ai-image                 # opens ComfyUI for image gen (port 8188)
 ```
 
-## The model menu (config/models.catalog.json)
+## The model menu (config/models.catalog.<tier>.json)
 
 The OpenAI-compatible server runs on **port 8080** (`lms server start --port
-8080`), so the existing thin clients keep working unchanged. Switch by use-case:
+8080`), so the existing thin clients keep working unchanged. Switch by use-case.
+The table below is the **`max`** tier (the 5090 build); the other four tiers
+(`cpu`/`entry`/`mid`/`high`) mirror this menu with smaller models that fit their
+VRAM — `distro-ai-model list` prints the active tier's actual menu.
 
-| Use-case | Best | Fast/alt |
+| Use-case (max tier) | Best | Fast/alt |
 |---|---|---|
 | `coding` | Qwen2.5-Coder-32B | Qwen2.5-Coder-7B |
 | `cad` | Qwen2.5-Coder-32B | DeepSeek-Coder-V2-Lite 16B |
@@ -56,7 +83,8 @@ The OpenAI-compatible server runs on **port 8080** (`lms server start --port
 | `image` (ComfyUI) | FLUX.1-dev³ | SDXL |
 
 `distro-ai-model list | use <case> [variant] | load <id> | server start|stop |
-status | unload`.
+status | unload`. It resolves the active tier from `CRUCIBLE_AI_TIER` →
+`~/.config/crucible-ai/tier` → `max`, and the default variant from the profile.
 
 **Verified caveats (the reason this was researched, not guessed):**
 - ¹ **Llama-3.3-70B** at Q4_K_M is ~42.5GB — it does NOT fit the 32GB 5090, so

@@ -1,0 +1,281 @@
+#!/usr/bin/env bash
+#
+# Auto-detects the AI-model TIER for this machine and records it (plus the
+# laptop power PROFILE and the image-gen choice) into ~/.config/crucible-ai so
+# distro-ai-model / 02-preload-models.sh preload models that fit the hardware.
+#
+# What it detects (all cross-vendor, no root needed):
+#   VRAM  - Nvidia via nvidia-smi; AMD (and APU carveout) via
+#           /sys/class/drm/card*/device/mem_info_vram_total. Max across GPUs.
+#   RAM   - /proc/meminfo MemTotal.
+#   form  - laptop vs desktop via DMI chassis_type + battery presence.
+#
+# VRAM -> tier (GiB):  <5 cpu | 5-11 entry | 11-20 mid | 20-30 high | >=30 max
+#   (cpu tier = no usable dedicated GPU: CPU inference, <=3B models.)
+#
+# PROFILE (which catalog variant distro-ai-model loads by default):
+#   desktop -> power (best models). laptop -> you choose:
+#     efficiency (fast/small, least battery) | balance | power (== desktop).
+#
+# IMAGE (which ComfyUI image model to preload): you pick from what the tier
+#   supports, or none.
+#
+# Detection inputs are overridable by env (CRUCIBLE_VRAM_MIB, CRUCIBLE_IS_LAPTOP,
+# CRUCIBLE_RAM_MB, NVIDIA_SMI, SYS_DRM_ROOT, SYS_DMI_CHASSIS, SYS_POWER_ROOT,
+# PROC_MEMINFO) so this is testable without the real hardware.
+#
+# Usage:
+#   distro-ai-detect-tier                 # detect; ask (laptop profile + image) if a TTY; write config
+#   distro-ai-detect-tier --print         # detect + print only; write nothing, ask nothing
+#   distro-ai-detect-tier --yes           # detect + write with defaults; ask nothing (setup wizard / non-TTY)
+#   distro-ai-detect-tier --tier mid --profile efficiency --image sdxl   # force any field
+
+set -euo pipefail
+
+SELF="${BASH_SOURCE[0]}"; [ -L "$SELF" ] && SELF="$(readlink "$SELF")"
+SCRIPT_DIR="$(cd "$(dirname "$SELF")" && pwd)"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/crucible-ai"
+
+command -v python3 >/dev/null 2>&1 || { echo "python3 required (to read the catalogs)." >&2; exit 1; }
+
+# ---- argument parsing --------------------------------------------------------
+DO_WRITE=1        # write config?
+DO_ASK=""         # "" = auto (ask iff TTY); 1 = force ask; 0 = never ask
+FORCE_TIER=""; FORCE_PROFILE=""; FORCE_IMAGE=""
+while [ $# -gt 0 ]; do
+    case "$1" in
+        --print)   DO_WRITE=0; DO_ASK=0 ;;
+        --yes|-y)  DO_ASK=0 ;;
+        --tier)    FORCE_TIER="${2:-}"; shift ;;
+        --profile) FORCE_PROFILE="${2:-}"; shift ;;
+        --image)   FORCE_IMAGE="${2:-}"; shift ;;
+        -h|--help)
+            sed -n '2,32p' "$SELF" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) echo "Unknown arg: $1 (see --help)" >&2; exit 1 ;;
+    esac
+    shift
+done
+# Default: ask only when connected to a terminal.
+[ -n "$DO_ASK" ] || { [ -t 0 ] && [ -t 1 ] && DO_ASK=1 || DO_ASK=0; }
+
+valid_tier()    { case "$1" in cpu|entry|mid|high|max) return 0;; *) return 1;; esac; }
+valid_profile() { case "$1" in efficiency|balance|power) return 0;; *) return 1;; esac; }
+
+# ---- hardware detection (all inputs env-overridable) -------------------------
+detect_vram_mib() {
+    if [ -n "${CRUCIBLE_VRAM_MIB:-}" ]; then echo "$CRUCIBLE_VRAM_MIB"; return; fi
+    local best=0 v smi f bytes mib
+    smi="${NVIDIA_SMI:-nvidia-smi}"
+    if command -v "$smi" >/dev/null 2>&1; then
+        while read -r v; do
+            [[ "$v" =~ ^[0-9]+$ ]] || continue
+            if [ "$v" -gt "$best" ]; then best="$v"; fi
+        done < <("$smi" --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null || true)
+    fi
+    for f in "${SYS_DRM_ROOT:-/sys/class/drm}"/card*/device/mem_info_vram_total; do
+        [ -r "$f" ] || continue
+        bytes="$(cat "$f" 2>/dev/null || echo 0)"
+        [[ "$bytes" =~ ^[0-9]+$ ]] || continue
+        mib=$(( bytes / 1048576 ))
+        if [ "$mib" -gt "$best" ]; then best="$mib"; fi
+    done
+    echo "$best"
+}
+
+detect_is_laptop() {
+    if [ -n "${CRUCIBLE_IS_LAPTOP:-}" ]; then echo "$CRUCIBLE_IS_LAPTOP"; return; fi
+    local chassis b
+    chassis="$(cat "${SYS_DMI_CHASSIS:-/sys/class/dmi/id/chassis_type}" 2>/dev/null || echo 0)"
+    case "$chassis" in
+        8|9|10|11|14|30|31|32) echo 1; return ;;   # portable/laptop/notebook/handheld/tablet/convertible/detachable
+    esac
+    for b in "${SYS_POWER_ROOT:-/sys/class/power_supply}"/BAT*; do
+        [ -e "$b" ] && { echo 1; return; }
+    done
+    echo 0
+}
+
+detect_ram_mb() {
+    if [ -n "${CRUCIBLE_RAM_MB:-}" ]; then echo "$CRUCIBLE_RAM_MB"; return; fi
+    local kb
+    kb="$(awk '/^MemTotal:/{print $2}' "${PROC_MEMINFO:-/proc/meminfo}" 2>/dev/null || echo 0)"
+    [[ "$kb" =~ ^[0-9]+$ ]] || kb=0
+    echo $(( kb / 1024 ))
+}
+
+detect_gpu_desc() {
+    local smi="${NVIDIA_SMI:-nvidia-smi}" name f
+    if command -v "$smi" >/dev/null 2>&1; then
+        name="$("$smi" --query-gpu=name --format=csv,noheader 2>/dev/null | head -n1 || true)"
+        [ -n "$name" ] && { echo "$name"; return; }
+    fi
+    for f in "${SYS_DRM_ROOT:-/sys/class/drm}"/card*/device/mem_info_vram_total; do
+        [ -r "$f" ] && { echo "AMD GPU (sysfs)"; return; }
+    done
+    echo "no dedicated GPU (integrated / CPU)"
+}
+
+tier_for_vram() {  # <vram_mib> -> tier
+    local v="$1"
+    if   [ "$v" -lt 5120 ];  then echo cpu
+    elif [ "$v" -lt 11264 ]; then echo entry
+    elif [ "$v" -lt 20480 ]; then echo mid
+    elif [ "$v" -lt 30720 ]; then echo high
+    else echo max; fi
+}
+
+# ---- catalog helpers ---------------------------------------------------------
+catalog_for() { echo "$SCRIPT_DIR/../config/models.catalog.$1.json"; }
+
+# image_tokens <tier> -> prints "token<TAB>label" per supported image model + none.
+# Maps catalog model id -> download token understood by 04-download-image-models.sh.
+image_tokens() {
+    CATALOG="$(catalog_for "$1")" python3 - <<'PY'
+import json, os
+tokmap = {"sdxl": ("sdxl", "SDXL base (fast, ~7GB, any dGPU)"),
+          "flux1-schnell": ("flux-schnell", "FLUX.1-schnell (Apache-2.0, no token, ~12GB VRAM)"),
+          "flux1-dev": ("flux-dev", "FLUX.1-dev (best quality, GATED: needs HF token)")}
+try:
+    cat = json.load(open(os.environ["CATALOG"]))
+except Exception:
+    cat = {"use_cases": {}}
+uc = cat.get("use_cases", {}).get("image")
+seen = []
+if uc:
+    for k, v in uc.items():
+        if k in ("label", "runtime"): continue
+        if v in tokmap and tokmap[v][0] not in [s[0] for s in seen]:
+            seen.append(tokmap[v])
+for tok, lbl in seen:
+    print(f"{tok}\t{lbl}")
+print("none\tNo image generation")
+PY
+}
+
+# default image token for a tier = token of the image use-case's "best", else none.
+default_image_token() {
+    CATALOG="$(catalog_for "$1")" python3 - <<'PY'
+import json, os
+tokmap = {"sdxl": "sdxl", "flux1-schnell": "flux-schnell", "flux1-dev": "flux-dev"}
+try:
+    cat = json.load(open(os.environ["CATALOG"]))
+except Exception:
+    cat = {}
+uc = (cat.get("use_cases") or {}).get("image") or {}
+best = uc.get("best") or uc.get("alt") or uc.get("fast")
+print(tokmap.get(best, "none"))
+PY
+}
+
+# ---- run detection -----------------------------------------------------------
+VRAM_MIB="$(detect_vram_mib)"
+IS_LAPTOP="$(detect_is_laptop)"
+RAM_MB="$(detect_ram_mb)"
+GPU_DESC="$(detect_gpu_desc)"
+VRAM_GIB="$(python3 -c "print(round($VRAM_MIB/1024, 1))")"
+RAM_GIB="$(python3 -c "print(round($RAM_MB/1024, 1))")"
+
+TIER="${FORCE_TIER:-$(tier_for_vram "$VRAM_MIB")}"
+valid_tier "$TIER" || { echo "Invalid --tier '$TIER' (cpu entry mid high max)." >&2; exit 1; }
+
+if [ -n "$FORCE_PROFILE" ]; then
+    PROFILE="$FORCE_PROFILE"
+elif [ "$IS_LAPTOP" = "1" ]; then
+    PROFILE="balance"
+else
+    PROFILE="power"   # desktop always runs the best models the tier allows
+fi
+valid_profile "$PROFILE" || { echo "Invalid --profile '$PROFILE' (efficiency balance power)." >&2; exit 1; }
+
+IMAGE="${FORCE_IMAGE:-$(default_image_token "$TIER")}"
+
+# ---- report ------------------------------------------------------------------
+c()  { printf '\033[%sm%s\033[0m' "$1" "$2"; }      # inline (no newline)
+cl() { printf '\033[%sm%s\033[0m\n' "$1" "$2"; }    # whole colored line
+cl 36 '== Crucible AI hardware detection =='
+printf '  %-14s %s\n' "GPU:"    "$GPU_DESC"
+printf '  %-14s %s GiB (%s MiB)\n' "VRAM:" "$VRAM_GIB" "$VRAM_MIB"
+printf '  %-14s %s GiB\n' "RAM:"  "$RAM_GIB"
+printf '  %-14s %s\n' "Form factor:" "$([ "$IS_LAPTOP" = 1 ] && echo laptop || echo desktop)"
+printf '  %-14s %s\n' "-> Tier:"  "$(c 32 "$TIER")"
+echo ""
+
+if [ "$RAM_MB" -gt 0 ] && [ "$RAM_MB" -lt 4096 ]; then
+    cl 33 "WARNING: only ${RAM_GIB} GiB RAM — even cpu-tier 3B models want ~4GB+ free. Expect swapping."
+fi
+if [ "$TIER" = "cpu" ]; then
+    cl 33 'No usable dedicated VRAM detected -> cpu tier (CPU inference, no image generation).'
+    echo "If you DO have a discrete GPU we missed (e.g. Intel Arc), rerun: distro-ai-detect-tier --tier entry|mid|high|max"
+fi
+
+# ---- interactive choices -----------------------------------------------------
+ask_profile() {
+    [ "$IS_LAPTOP" = "1" ] || return 0          # desktops don't choose
+    [ -n "$FORCE_PROFILE" ] && return 0
+    cl 36 'Laptop power profile:'
+    echo "  1) efficiency  - fast/small models, least battery drain"
+    echo "  2) balance     - balanced models (default)"
+    echo "  3) power       - best models the tier allows (same as a desktop; heaviest)"
+    local ans
+    read -r -p "Choose 1/2/3 [2]: " ans || ans=""
+    case "$ans" in
+        1) PROFILE="efficiency" ;;
+        3) PROFILE="power" ;;
+        *) PROFILE="balance" ;;
+    esac
+}
+
+ask_image() {
+    [ -n "$FORCE_IMAGE" ] && return 0
+    local rows=(); mapfile -t rows < <(image_tokens "$TIER")
+    # cpu tier / no image support -> only "none"; nothing to ask.
+    if [ "${#rows[@]}" -le 1 ]; then IMAGE="none"; return 0; fi
+    cl 36 'Image generation (pick one to preload, runs in ComfyUI):'
+    local i=1 tok lbl
+    for row in "${rows[@]}"; do
+        IFS=$'\t' read -r tok lbl <<< "$row"
+        printf '  %d) %-12s %s\n' "$i" "$tok" "$lbl"
+        i=$((i+1))
+    done
+    local ans; read -r -p "Choose 1-${#rows[@]} [1]: " ans || ans=""
+    [[ "$ans" =~ ^[0-9]+$ ]] && [ "$ans" -ge 1 ] && [ "$ans" -le "${#rows[@]}" ] || ans=1
+    IFS=$'\t' read -r IMAGE _ <<< "${rows[$((ans-1))]}"
+}
+
+if [ "$DO_ASK" = "1" ]; then
+    ask_profile
+    ask_image
+fi
+
+echo ""
+printf '  %-14s %s\n' "Profile:" "$(c 32 "$PROFILE")"
+printf '  %-14s %s\n' "Image gen:" "$(c 32 "$IMAGE")"
+
+# ---- persist -----------------------------------------------------------------
+if [ "$DO_WRITE" = "1" ]; then
+    mkdir -p "$CONFIG_HOME"
+    printf '%s\n' "$TIER"    > "$CONFIG_HOME/tier"
+    printf '%s\n' "$PROFILE" > "$CONFIG_HOME/profile"
+    printf '%s\n' "$IMAGE"   > "$CONFIG_HOME/image"
+    {
+        echo "# Written by distro-ai-detect-tier"
+        echo "gpu=$GPU_DESC"
+        echo "vram_mib=$VRAM_MIB"
+        echo "ram_mb=$RAM_MB"
+        echo "is_laptop=$IS_LAPTOP"
+        echo "tier=$TIER"
+        echo "profile=$PROFILE"
+        echo "image=$IMAGE"
+    } > "$CONFIG_HOME/detected"
+    echo ""
+    cl 32 "Wrote $CONFIG_HOME/{tier,profile,image}."
+    echo "Next: preload the models for this tier ->"
+    echo "  modes/ai/setup/02-preload-models.sh          # all $TIER-tier LLMs"
+    if [ "$IMAGE" != "none" ]; then
+        echo "  modes/ai/setup/04-download-image-models.sh --from-config   # $IMAGE image model"
+    fi
+    echo "Then load one:  distro-ai-model use coding"
+else
+    echo ""
+    echo "(--print: nothing written. Re-run without --print to save, or pass --yes.)"
+fi

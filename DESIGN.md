@@ -106,6 +106,14 @@ Key verified facts that shaped the build (researched, not guessed):
   clients already use, so `distro-ai-ask`/overlay/nautilus work unchanged.
 - Models are pulled with `lms get <repo>@<quant>` and loaded with `lms load
   --gpu max|<ratio>`. The new `distro-ai-model` switches by use-case.
+- **Hardware tiers (2026-07-01):** every build preloads local models sized to
+  its hardware. `distro-ai-detect-tier` auto-detects VRAM (Nvidia `nvidia-smi`,
+  AMD/APU sysfs), RAM, and laptop-vs-desktop, and maps VRAM → one of five tiers
+  — `cpu` (≤3B, CPU-only) / `entry` (5–11GB) / `mid` (11–20GB) / `high`
+  (20–30GB) / `max` (≥30GB, the 5090). Each has its own quantized-GGUF catalog
+  `config/models.catalog.<tier>.json`. On laptops the user also picks a power
+  profile (efficiency/balance/power) selecting which variant loads by default;
+  image generation is opt-in at detect time. IDs/quants are web-verified.
 - **Llama-3.3-70B** (~42.5GB Q4) exceeds the 32GB 5090 → partial CPU offload,
   ~6–12 tok/s; everything else fits fully in VRAM.
 - The requested **Llama-3.2-Vision does NOT work in LM Studio** (llama.cpp has
@@ -131,11 +139,13 @@ Optional, explicit opt-in only: a toggle to also route through Claude (cloud) wh
 This is the part of the project most worth prototyping first — you already have a working stack, the task is porting + systemd-wrapping it, not inventing it.
 
 **Status: built (LM Studio + ComfyUI)**, see `modes/ai/`. Install scripts
-(LM Studio headless, model preload, ComfyUI, image-model download), the
-`distro-ai-model` use-case switcher + `models.catalog.json`, `distro-ai-image`,
-user-level systemd units, and the thin clients (unchanged, on :8080). The
-`distro-ai-model` switcher is execution-tested with a **stubbed `lms`**
-(`tests/test_ai_model.sh`, 15 assertions) — never a real LM Studio. **Not yet
+(LM Studio headless, tier-aware model preload, ComfyUI, image-model download),
+the `distro-ai-model` use-case switcher + the five per-tier
+`models.catalog.<tier>.json`, `distro-ai-detect-tier` hardware auto-detect,
+`distro-ai-image`, user-level systemd units, and the thin clients (unchanged, on
+:8080). The switcher + tier detection are execution-tested with a **stubbed
+`lms`** and fully injected hardware inputs (`tests/test_ai_model.sh` +
+`tests/test_detect_tier.sh`) — never a real LM Studio or GPU. **Not yet
 run on the real card — the RTX 5090 arrives ~late July 2026, full build ~early
 August 2026.** Install method, exact model repos/quants, vision-support, and
 ComfyUI/FLUX facts are all web-verified — see `modes/ai/README.md` and

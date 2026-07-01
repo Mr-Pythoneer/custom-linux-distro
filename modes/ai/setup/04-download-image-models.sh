@@ -2,16 +2,20 @@
 #
 # Downloads the image-generation models into ComfyUI's model dirs.
 #
-# Defaults to FLUX.1-schnell (Apache-2.0, NO Hugging Face token needed, via the
-# Comfy-Org mirror) + SDXL base. FLUX.1-dev is GATED (requires accepting its
-# non-commercial license on HF + a token) — it's only fetched if you export
-# HF_TOKEN and pass --flux-dev.
+# By default (no flags) it fetches FLUX.1-schnell (Apache-2.0, NO Hugging Face
+# token, via the Comfy-Org mirror) + SDXL base. FLUX.1-dev is GATED (accept its
+# non-commercial license on HF + a token) — only with --flux-dev + HF_TOKEN.
+#
+# --from-config reads the image choice recorded by distro-ai-detect-tier
+# (~/.config/crucible-ai/image: none|sdxl|flux-schnell|flux-dev) and downloads
+# only that, so the setup wizard fetches exactly what the user picked.
 #
 # Uses the huggingface-cli (hf) downloader. Run as the desktop user.
 #
 # Usage:
-#   ./04-download-image-models.sh [comfyui_dir]              # FLUX.1-schnell + SDXL (no token)
-#   HF_TOKEN=hf_xxx ./04-download-image-models.sh [dir] --flux-dev   # also the gated FLUX.1-dev
+#   ./04-download-image-models.sh [comfyui_dir]                     # SDXL + FLUX.1-schnell (no token)
+#   ./04-download-image-models.sh [comfyui_dir] --from-config       # only what detect-tier recorded
+#   HF_TOKEN=hf_xxx ./04-download-image-models.sh [dir] --flux-dev  # also the gated FLUX.1-dev
 
 set -euo pipefail
 
@@ -20,9 +24,36 @@ if [ "$(id -u)" -eq 0 ]; then
     exit 1
 fi
 
-COMFY_DIR="${1:-$HOME/ComfyUI}"
-WANT_FLUX_DEV=false
-[ "${2:-}" = "--flux-dev" ] && WANT_FLUX_DEV=true
+# ---- args: [comfyui_dir] plus any of --from-config / --flux-dev --------------
+COMFY_DIR=""
+FROM_CONFIG=false
+WANT_SDXL=true; WANT_SCHNELL=true; WANT_DEV=false
+for a in "$@"; do
+    case "$a" in
+        --from-config) FROM_CONFIG=true ;;
+        --flux-dev)    WANT_DEV=true ;;
+        -*)            echo "Unknown flag: $a" >&2; exit 1 ;;
+        *)             COMFY_DIR="$a" ;;
+    esac
+done
+COMFY_DIR="${COMFY_DIR:-$HOME/ComfyUI}"
+
+if [ "$FROM_CONFIG" = true ]; then
+    CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/crucible-ai"
+    choice="$(cat "$CONFIG_HOME/image" 2>/dev/null || echo none)"
+    case "$choice" in
+        none)         WANT_SDXL=false; WANT_SCHNELL=false; WANT_DEV=false ;;
+        sdxl)         WANT_SDXL=true;  WANT_SCHNELL=false; WANT_DEV=false ;;
+        flux-schnell) WANT_SDXL=true;  WANT_SCHNELL=true;  WANT_DEV=false ;;
+        flux-dev)     WANT_SDXL=true;  WANT_SCHNELL=true;  WANT_DEV=true  ;;
+        *) echo "Unrecognized image choice '$choice' in $CONFIG_HOME/image — using default (SDXL + schnell)." >&2 ;;
+    esac
+    echo "From config: image=$choice"
+    if [ "$WANT_SDXL" = false ] && [ "$WANT_SCHNELL" = false ] && [ "$WANT_DEV" = false ]; then
+        echo "Image generation disabled (image=none). Nothing to download."
+        exit 0
+    fi
+fi
 
 [ -d "$COMFY_DIR/models" ] || { echo "ComfyUI not found at $COMFY_DIR (run 03-install-comfyui.sh first)." >&2; exit 1; }
 
@@ -42,19 +73,24 @@ te="$COMFY_DIR/models/text_encoders"
 vae="$COMFY_DIR/models/vae"
 unet="$COMFY_DIR/models/diffusion_models"
 
-echo -e "\033[36m== SDXL base 1.0 (no token, ~7GB) ==\033[0m"
-"$HF" download stabilityai/stable-diffusion-xl-base-1.0 sd_xl_base_1.0.safetensors --local-dir "$ckpt"
+if [ "$WANT_SDXL" = true ]; then
+    echo -e "\033[36m== SDXL base 1.0 (no token, ~7GB) ==\033[0m"
+    "$HF" download stabilityai/stable-diffusion-xl-base-1.0 sd_xl_base_1.0.safetensors --local-dir "$ckpt"
+fi
 
-echo -e "\033[36m== FLUX text encoders + (schnell) — open repos, no token ==\033[0m"
-# Text encoders (shared by FLUX dev + schnell), from the open Comfy repo.
-"$HF" download comfyanonymous/flux_text_encoders clip_l.safetensors t5xxl_fp16.safetensors --local-dir "$te"
+if [ "$WANT_SCHNELL" = true ] || [ "$WANT_DEV" = true ]; then
+    echo -e "\033[36m== FLUX text encoders (shared by dev + schnell, open repo, no token) ==\033[0m"
+    "$HF" download comfyanonymous/flux_text_encoders clip_l.safetensors t5xxl_fp16.safetensors --local-dir "$te"
+fi
 
-echo -e "\033[36m== FLUX.1-schnell (Apache-2.0, no token, ~17GB fp8) ==\033[0m"
-# Comfy-Org mirror avoids the token prompt entirely. fp8 all-in-one goes in checkpoints.
-"$HF" download Comfy-Org/flux1-schnell flux1-schnell-fp8.safetensors --local-dir "$ckpt" \
-    || echo "WARNING: flux1-schnell-fp8 download failed — check the repo/file name on HF." >&2
+if [ "$WANT_SCHNELL" = true ]; then
+    echo -e "\033[36m== FLUX.1-schnell (Apache-2.0, no token, ~17GB fp8) ==\033[0m"
+    # Comfy-Org mirror avoids the token prompt entirely. fp8 all-in-one goes in checkpoints.
+    "$HF" download Comfy-Org/flux1-schnell flux1-schnell-fp8.safetensors --local-dir "$ckpt" \
+        || echo "WARNING: flux1-schnell-fp8 download failed — check the repo/file name on HF." >&2
+fi
 
-if [ "$WANT_FLUX_DEV" = "true" ]; then
+if [ "$WANT_DEV" = true ]; then
     echo -e "\033[36m== FLUX.1-dev (GATED — needs HF_TOKEN + accepted license, ~24GB) ==\033[0m"
     if [ -z "${HF_TOKEN:-}" ]; then
         echo "HF_TOKEN is not set. FLUX.1-dev is gated: accept the license at" >&2
@@ -64,8 +100,7 @@ if [ "$WANT_FLUX_DEV" = "true" ]; then
     fi
     "$HF" download black-forest-labs/FLUX.1-dev flux1-dev.safetensors --local-dir "$unet"
     "$HF" download black-forest-labs/FLUX.1-dev ae.safetensors --local-dir "$vae"
-else
-    echo "Skipping FLUX.1-dev (gated). To add it later: HF_TOKEN=hf_xxx $(basename "$0") \"$COMFY_DIR\" --flux-dev"
+elif [ "$WANT_SCHNELL" = true ]; then
     # schnell needs a VAE too; the dev ae.safetensors is gated, so fetch the
     # repackaged open VAE for the schnell pipeline.
     "$HF" download Comfy-Org/flux1-schnell ae.safetensors --local-dir "$vae" 2>/dev/null \
