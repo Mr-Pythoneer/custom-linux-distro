@@ -97,7 +97,12 @@ gather_gpus() {
         bytes="$(cat "$f" 2>/dev/null || echo 0)"
         [[ "$bytes" =~ ^[0-9]+$ ]] || continue
         mib=$(( bytes / 1048576 ))
-        printf '%s\tAMD GPU\n' "$mib"
+        # Tag each card by its PCI device id so compute_vram only pools
+        # physically-identical cards. Without this, a discrete Radeon and a
+        # Ryzen iGPU/APU carveout (or two different Radeons) would all be named
+        # "AMD GPU", get summed into one group, and could cross a tier boundary.
+        did="$(cat "$(dirname "$f")/device" 2>/dev/null || echo '?')"
+        printf '%s\tAMD GPU %s\n' "$mib" "$did"
     done
 }
 

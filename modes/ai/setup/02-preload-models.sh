@@ -26,7 +26,11 @@ CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/crucible-ai"
 
 # --tier <t> may lead the args; otherwise fall back to env/config/default.
 TIER=""
-if [ "${1:-}" = "--tier" ]; then TIER="${2:-}"; shift 2; fi
+if [ "${1:-}" = "--tier" ]; then
+    TIER="${2:-}"
+    [ -n "$TIER" ] || { echo "--tier requires a tier name (cpu entry mid high max ultra)." >&2; exit 1; }
+    shift 2   # safe: a non-empty $2 guarantees $# >= 2, so this never aborts under set -e
+fi
 [ -n "$TIER" ] || TIER="${CRUCIBLE_AI_TIER:-$(cat "$CONFIG_HOME/tier" 2>/dev/null || echo max)}"
 CATALOG="$SCRIPT_DIR/../config/models.catalog.$TIER.json"
 [ -f "$CATALOG" ] || { echo "No catalog for tier '$TIER' ($CATALOG). Tiers: cpu entry mid high max ultra." >&2; exit 1; }

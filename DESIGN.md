@@ -152,7 +152,7 @@ This is the part of the project most worth prototyping first — you already hav
 
 **Status: built (LM Studio + ComfyUI)**, see `modes/ai/`. Install scripts
 (LM Studio headless, tier-aware model preload, ComfyUI, image-model download),
-the `distro-ai-model` use-case switcher + the five per-tier
+the `distro-ai-model` use-case switcher + the six per-tier
 `models.catalog.<tier>.json`, `distro-ai-detect-tier` hardware auto-detect,
 `distro-ai-image`, user-level systemd units, and the thin clients (unchanged, on
 :8080). The switcher + tier detection are execution-tested with a **stubbed

@@ -41,6 +41,11 @@ if [ ! -f "$WINEPREFIX/system.reg" ]; then
 fi
 
 # fetch_release_asset <repo> <name-regex> -> sets ASSET_URL, ASSET_NAME, ASSET_SHA256
+# NOTE: name-regex is passed to jq via `--arg` and used verbatim by test(), so
+# write it with SINGLE backslashes (\.tar) — jq does NOT un-escape --arg values.
+# (Only regexes written as jq string LITERALS, e.g. test("\\.tar"), need the
+# doubled backslash. Doubling it here makes test() demand a literal '\' in the
+# filename, so nothing ever matches.)
 fetch_release_asset() {
     local repo="$1" name_re="$2"
     local json
@@ -68,7 +73,7 @@ download_verify() {
 
 install_dxvk() {
     echo -e "\033[36m== DXVK ==\033[0m"
-    fetch_release_asset "doitsujin/dxvk" 'dxvk-[0-9].*\\.tar\\.gz$'
+    fetch_release_asset "doitsujin/dxvk" 'dxvk-[0-9].*\.tar\.gz$'
     echo "Latest DXVK asset: $ASSET_NAME"
     local tmp; tmp=$(mktemp -d)
     download_verify "$ASSET_URL" "$ASSET_NAME" "$ASSET_SHA256" "$tmp"
@@ -97,7 +102,7 @@ install_dxvk() {
 
 install_vkd3d() {
     echo -e "\033[36m== VKD3D-Proton ==\033[0m"
-    fetch_release_asset "HansKristian-Work/vkd3d-proton" 'vkd3d-proton-[0-9].*\\.tar\\.zst$'
+    fetch_release_asset "HansKristian-Work/vkd3d-proton" 'vkd3d-proton-[0-9].*\.tar\.zst$'
     echo "Latest VKD3D-Proton asset: $ASSET_NAME"
     local tmp; tmp=$(mktemp -d)
     download_verify "$ASSET_URL" "$ASSET_NAME" "$ASSET_SHA256" "$tmp"

@@ -418,10 +418,11 @@
       else if (cpu === 'mid') notes.push(note('Mainstream CPU — 3B models run at ~5–10 tok/s.', true));
       else notes.push(note('High-core CPU — best CPU-only speed, though any dGPU still wins big.', true));
     } else if (t === 'max') {
-      // 70B partial offload needs the system RAM to hold the spill (~64GB target).
+      // The 70B loads via partial CPU offload (--gpu 0.8), which spills to system
+      // RAM — so RAM decides how well it runs. distro-ai-model does NOT auto-swap
+      // the model by RAM; it just warns and you can pick a smaller one by hand.
       if (ram < 48) {
-        models.General = 'Qwen2.5-32B (fits VRAM)';
-        notes.push(note('Llama-3.3-70B needs ~64GB RAM for CPU-offload — with ' + ram + 'GB it stays at 32B (fully in VRAM). Add RAM to unlock the 70B.'));
+        notes.push(note('Llama-3.3-70B uses partial CPU offload (--gpu 0.8) and wants ~64GB RAM — with ' + ram + 'GB it will be slow or spill. For a snappy fit, pick a smaller model by hand: distro-ai-model use day-to-day balanced (Qwen2.5-14B).'));
       } else {
         notes.push(note('Llama-3.3-70B runs via partial CPU offload to your ' + ram + 'GB RAM (~6–12 tok/s).', true));
       }

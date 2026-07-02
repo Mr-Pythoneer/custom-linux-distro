@@ -102,7 +102,9 @@ apply_gpu_perf() {
         local maxclk=""
         maxclk=$(nvidia-smi -q -d SUPPORTED_CLOCKS 2>/dev/null | awk '/Graphics/{print $3; exit}') || maxclk=""
         if [ -n "${maxclk:-}" ]; then
-            sudo nvidia-smi -lgc "0,${maxclk}" >/dev/null 2>&1 || echo "WARNING: could not lock GPU clocks" >&2
+            # Both bounds = maxclk actually PINS the clock; a min of 0 would let
+            # the GPU keep downclocking, defeating the point of the lock.
+            sudo nvidia-smi -lgc "${maxclk},${maxclk}" >/dev/null 2>&1 || echo "WARNING: could not lock GPU clocks" >&2
         fi
         if [ -n "${DISPLAY:-}" ] && command -v nvidia-settings >/dev/null 2>&1; then
             nvidia-settings -a '[gpu:0]/GpuPowerMizerMode=1' >/dev/null 2>&1 || true   # X11 only; best-effort
