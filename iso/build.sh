@@ -110,6 +110,76 @@ for bin in "${!DISTRO_BINS[@]}"; do
 done
 find "$INCLUDES/opt/distro" -type f \( -name "*.sh" -o -name "distro-*" \) -exec chmod +x {} +
 
+# ---------------------------------------------------------------------------
+# OS IDENTITY — make it boot AS Crucible OS, not stock Ubuntu. Crucible OS is
+# Ubuntu-BASED (kernel + packages are Ubuntu's, ID_LIKE=ubuntu so apt/PPA logic
+# keeps working) but everything the user SEES is rebranded: os-release, boot
+# splash, wallpaper, hostname, terminal fetch.
+# ---------------------------------------------------------------------------
+echo -e "\033[36mBaking in Crucible OS identity...\033[0m"
+VERSION_NUM="1.0"; VERSION_CODENAME="forge"
+# Per-strain VARIANT label (capitalize first letter).
+VARIANT_LABEL="$(printf '%s' "$STRAIN" | sed 's/^./\U&/')"
+
+mkdir -p "$INCLUDES/etc" "$INCLUDES/usr/lib"
+_osrelease() {
+cat <<EOF
+NAME="Crucible OS"
+PRETTY_NAME="Crucible OS ${VERSION_NUM} (${VARIANT_LABEL})"
+ID=crucible
+ID_LIKE="ubuntu debian"
+VERSION="${VERSION_NUM} (${VERSION_CODENAME^})"
+VERSION_ID="${VERSION_NUM}"
+VERSION_CODENAME=${VERSION_CODENAME}
+UBUNTU_CODENAME=noble
+HOME_URL="https://mr-pythoneer.github.io/crucible-os/"
+SUPPORT_URL="https://github.com/Mr-Pythoneer/crucible-os"
+BUG_REPORT_URL="https://github.com/Mr-Pythoneer/crucible-os/issues"
+VARIANT="${VARIANT_LABEL}"
+VARIANT_ID=${STRAIN}
+LOGO=crucible
+EOF
+}
+_osrelease > "$INCLUDES/etc/os-release"           # overrides base-files' symlink
+_osrelease > "$INCLUDES/usr/lib/os-release"
+cat > "$INCLUDES/etc/lsb-release" <<EOF
+DISTRIB_ID=Crucible
+DISTRIB_RELEASE=${VERSION_NUM}
+DISTRIB_CODENAME=${VERSION_CODENAME}
+DISTRIB_DESCRIPTION="Crucible OS ${VERSION_NUM}"
+EOF
+printf 'Crucible OS %s (%s) \\n \\l\n\n' "$VERSION_NUM" "$VARIANT_LABEL" > "$INCLUDES/etc/issue"
+printf 'Crucible OS %s\n' "$VERSION_NUM" > "$INCLUDES/etc/issue.net"
+# Default hostname + matching hosts entry.
+echo "crucible" > "$INCLUDES/etc/hostname"
+printf '127.0.0.1\tlocalhost\n127.0.1.1\tcrucible\n' > "$INCLUDES/etc/hosts"
+
+# Wallpaper + logos into the image.
+mkdir -p "$INCLUDES/usr/share/backgrounds" "$INCLUDES/usr/share/crucible"
+cp "$REPO_ROOT/branding/out/wallpaper.png"  "$INCLUDES/usr/share/backgrounds/crucible-os.png"
+cp "$REPO_ROOT/branding/out/logo-clean.png" "$INCLUDES/usr/share/crucible/logo.png"
+cp "$REPO_ROOT/branding/out/logo-small.png" "$INCLUDES/usr/share/crucible/logo-small.png"
+
+# Plymouth boot splash (theme + its logo).
+mkdir -p "$INCLUDES/usr/share/plymouth/themes/crucible"
+cp "$REPO_ROOT/iso/branding/plymouth/crucible/crucible.plymouth" "$INCLUDES/usr/share/plymouth/themes/crucible/"
+cp "$REPO_ROOT/iso/branding/plymouth/crucible/crucible.script"   "$INCLUDES/usr/share/plymouth/themes/crucible/"
+cp "$REPO_ROOT/branding/out/logo-clean.png" "$INCLUDES/usr/share/plymouth/themes/crucible/logo.png"
+
+# fastfetch terminal identity.
+mkdir -p "$INCLUDES/etc/fastfetch"
+cp "$REPO_ROOT/iso/branding/fastfetch.jsonc" "$INCLUDES/etc/fastfetch/config.jsonc"
+
+# GNOME defaults (wallpaper/dark/favorites) via a system dconf db — harmless on
+# non-GNOME strains (dconf just isn't consulted there).
+mkdir -p "$INCLUDES/etc/dconf/db/local.d" "$INCLUDES/etc/dconf/profile"
+cp "$REPO_ROOT/iso/branding/dconf/local.d/00-crucible" "$INCLUDES/etc/dconf/db/local.d/00-crucible"
+cp "$REPO_ROOT/iso/branding/dconf/profile/user"        "$INCLUDES/etc/dconf/profile/user"
+
+# The identity package list (plymouth-themes/fastfetch/dconf-cli) and the
+# 0200-crucible-identity chroot hook are committed source files under
+# config/package-lists/ and config/hooks/live/ — nothing to generate here.
+
 # Neutralize the old fork's mode-ubuntu gfxboot machinery. Two unconditional
 # steps in lb_binary_syslinux assume the long-dead gfxboot-theme-ubuntu
 # package (~Ubuntu 12.04):

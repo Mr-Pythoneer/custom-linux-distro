@@ -1,0 +1,4 @@
+# Packages the Crucible OS identity needs (plymouth ships in the base image).
+plymouth-themes
+fastfetch
+dconf-cli
