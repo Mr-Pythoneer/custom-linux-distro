@@ -71,9 +71,13 @@ require_root_for() {
 # root/SSH shell) so those steps skip instead of running uselessly as root.
 target_user() {
     if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
-        printf '%s\n' "$SUDO_USER"
-    elif [ "$(id -u)" -ne 0 ]; then
-        id -un 2>/dev/null || id -u
+        printf '%s\n' "$SUDO_USER"; return
+    fi
+    if [ "$(id -u)" -ne 0 ]; then
+        # Prefer the name; fall back to the numeric uid when there's no passwd
+        # entry (e.g. a live/chroot uid) — checking OUTPUT, not just exit status.
+        local n; n="$(id -un 2>/dev/null)"
+        if [ -n "$n" ]; then printf '%s\n' "$n"; else id -u; fi
     fi
 }
 
