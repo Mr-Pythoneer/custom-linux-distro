@@ -7,3 +7,9 @@
 # Cost in the installed system: <1MB. Both are in noble universe.
 isolinux
 syslinux-common
+# isohybrid: the fork's lb_binary_iso runs it IN THE CHROOT and expects the
+# 'syslinux' package to provide it (true in 2012); noble ships it in
+# syslinux-utils (run 28567795887 died at "isohybrid: not found" AFTER the
+# 2.5GB ISO was already written). With it here, the fork's
+# Check_package chroot/usr/bin/isohybrid is satisfied.
+syslinux-utils
