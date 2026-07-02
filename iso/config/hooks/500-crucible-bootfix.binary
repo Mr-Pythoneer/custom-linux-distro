@@ -1,10 +1,7 @@
 #!/bin/sh
 #
-# Binary-stage hook for Ubuntu's live-build fork (3.0~a57): runs on the HOST
-# with cwd=binary/, AFTER lb_binary_syslinux and BEFORE lb_binary_iso
-# (sequence verified in the fork's lb_binary: syslinux(68) -> includes(73) ->
-# hooks(74) -> checksums(75) -> iso(86)). Two fixups the fork doesn't do for
-# casper-based images:
+# Binary-stage hook for Ubuntu's live-build fork (3.0~a57). Two fixups the
+# fork doesn't do for casper-based images:
 #
 # 1) Kernel names: lb_binary_linux-image copies vmlinuz-<ver>/initrd.img-<ver>
 #    into binary/casper/ WITH version suffixes and nothing renames them (the
@@ -13,45 +10,56 @@
 #
 # 2) isolinux boot files: our theme-free local bootloader template ships only
 #    isolinux.cfg (see config/bootloaders/isolinux/isolinux.cfg for why), so
-#    isolinux.bin + ldlinux.c32 must be copied from the chroot — the paths are
-#    noble's (/usr/lib/ISOLINUX/, /usr/lib/syslinux/modules/bios/), NOT the
-#    pre-2014 /usr/lib/syslinux/ the fork's stock template symlinks assume.
-#    The packages persist in the chroot via package-lists/bootloader.list.chroot.
-#    binary_iso then masters with '-b isolinux/isolinux.bin -c isolinux/boot.cat'.
+#    isolinux.bin + ldlinux.c32 must be staged from the chroot — noble's paths
+#    (/usr/lib/ISOLINUX/, /usr/lib/syslinux/modules/bios/), NOT the pre-2014
+#    /usr/lib/syslinux/ the fork's stock template symlinks assume. Packages
+#    persist in the chroot via package-lists/bootloader.list.chroot, and
+#    binary_iso masters with '-b isolinux/isolinux.bin -c isolinux/boot.cat'.
+#
+# CWD: the fork runs config/hooks/*.binary as ./config/hooks/<name> from the
+# BUILD ROOT (verified in lb_binary_hooks — its `cd binary` applies only to
+# the system-hook loop; runs 28566772295 + 28567283367 failed on exactly this).
+# Detect the layout so the hook also works if some other live-build runs it
+# with cwd=binary/.
 
 set -e
 
-for f in casper/vmlinuz-*; do
+if [ -d binary ] && [ -d chroot ]; then
+    B="binary"                                # cwd = build root (this fork)
+    ROOTS="chroot/chroot chroot"
+elif [ -d casper ] || [ -d ../chroot ]; then
+    B="."                                     # cwd = binary/
+    ROOTS="../chroot/chroot ../chroot"
+else
+    echo "crucible-bootfix: unrecognized cwd '$(pwd)' — expected the live-build root or binary/." >&2
+    exit 1
+fi
+
+for f in "$B"/casper/vmlinuz-*; do
     [ -e "$f" ] || continue
-    mv "$f" casper/vmlinuz
+    mv "$f" "$B/casper/vmlinuz"
     break   # single kernel flavour per image
 done
-for f in casper/initrd.img-*; do
+for f in "$B"/casper/initrd.img-*; do
     [ -e "$f" ] || continue
-    mv "$f" casper/initrd.img
+    mv "$f" "$B/casper/initrd.img"
     break
 done
 
-mkdir -p isolinux
-# NOTE the nested path: during the binary stage the fork's lb_binary_chroot
-# MOVES the real built system to chroot/chroot/ and puts a pristine bootstrap
-# copy at the outer chroot/ as a clean tool-chroot (verified in the fork's
-# lb_binary_chroot; run 28566772295 failed on the outer path). Our
-# bootloader.list.chroot packages live in the INNER one. Check both so this
-# also works on layouts that don't nest.
+mkdir -p "$B/isolinux"
 found=""
-for root in ../chroot/chroot ../chroot; do
+for root in $ROOTS; do
     if [ -e "$root/usr/lib/ISOLINUX/isolinux.bin" ]; then
-        cp "$root/usr/lib/ISOLINUX/isolinux.bin" isolinux/
+        cp "$root/usr/lib/ISOLINUX/isolinux.bin" "$B/isolinux/"
         # Since syslinux 5, isolinux.bin loads ldlinux.c32 from the same
         # directory at boot; without it boot stops at "failed to load ldlinux.c32".
-        cp "$root/usr/lib/syslinux/modules/bios/ldlinux.c32" isolinux/
+        cp "$root/usr/lib/syslinux/modules/bios/ldlinux.c32" "$B/isolinux/"
         found="$root"
         break
     fi
 done
 if [ -z "$found" ]; then
-    echo "crucible-bootfix: isolinux.bin not found in ../chroot/chroot or ../chroot — is 'isolinux' in package-lists/bootloader.list.chroot?" >&2
+    echo "crucible-bootfix: isolinux.bin not found under: $ROOTS — is 'isolinux' in package-lists/bootloader.list.chroot?" >&2
     exit 1
 fi
 
