@@ -71,6 +71,16 @@ if clone_pin https://github.com/aunetx/blur-my-shell.git "$BMS_SHA" "$WORK/bms";
         || echo "macos-look: Blur-my-Shell assemble incomplete — Normal mode has no glass." >&2
 fi
 
+# Replace the Ubuntu "swirl" (start-here / ubuntu-logo) INSIDE the freshly
+# installed WhiteSur icon themes with the Refract logo — the 0200 identity hook
+# ran before WhiteSur existed, so it couldn't reach these.
+_CL=/usr/share/refract/logo.png; _SVG=/usr/share/refract/logo.svg
+for _n in start-here ubuntu-logo distributor-logo; do
+    find /usr/share/icons/WhiteSur /usr/share/icons/WhiteSur-dark -type f -iname "${_n}.png" \
+        -exec cp "$_CL" {} \; 2>/dev/null || true
+    [ -f "$_SVG" ] && find /usr/share/icons/WhiteSur /usr/share/icons/WhiteSur-dark -type f -iname "${_n}.svg" \
+        -exec cp "$_SVG" {} \; 2>/dev/null || true
+done
 for t in WhiteSur WhiteSur-dark; do
     [ -d "/usr/share/icons/$t" ] && command -v gtk-update-icon-cache >/dev/null 2>&1 \
         && gtk-update-icon-cache -qf "/usr/share/icons/$t" 2>/dev/null || true

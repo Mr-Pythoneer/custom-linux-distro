@@ -65,6 +65,36 @@ require_root_for() {
     fi
 }
 
+# Resolve the human DESKTOP user we should act on for the per-user steps
+# (wallpaper/theme/blur/dock/AI). Invoked with `sudo`, that's $SUDO_USER (root
+# has no GUI session); run bare, it's us. Empty => no desktop user (e.g. a pure
+# root/SSH shell) so those steps skip instead of running uselessly as root.
+target_user() {
+    if [ -n "${SUDO_USER:-}" ] && [ "$SUDO_USER" != "root" ]; then
+        printf '%s\n' "$SUDO_USER"
+    elif [ "$(id -u)" -ne 0 ]; then
+        id -un 2>/dev/null || id -u
+    fi
+}
+
+# Run "$@" as the desktop user with their session bus — whether we're already
+# that user or root (via sudo). THIS is what makes `sudo distro-modectl switch`
+# actually apply the wallpaper/theme/blur/dock/AI-model: those are per-user and
+# were silently skipped before, because a root shell has no session bus.
+run_as_user() {
+    if [ "$(id -u)" -ne 0 ]; then
+        # Already a normal user — just make sure a session bus is set, then run.
+        DBUS_SESSION_BUS_ADDRESS="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/$(id -u)/bus}" "$@"
+        return
+    fi
+    # We're root (sudo) — drop to the invoking desktop user + their bus.
+    local u uid bus
+    u="$(target_user)"; [ -n "$u" ] || return 1
+    uid="$(id -u "$u" 2>/dev/null)" || return 1
+    bus="${DBUS_SESSION_BUS_ADDRESS:-unix:path=/run/user/${uid}/bus}"
+    sudo -u "$u" DBUS_SESSION_BUS_ADDRESS="$bus" XDG_RUNTIME_DIR="/run/user/${uid}" "$@"
+}
+
 apply_cpu_governor() {
     local gov="$1"
     if command -v cpupower >/dev/null 2>&1; then
@@ -141,23 +171,26 @@ apply_services() {
 # pass (guarded by id != 0). Best-effort: a failure warns but never aborts the
 # mode switch (the system settings still apply).
 apply_ai_model() {
-    [ "$(id -u)" -eq 0 ] && return 0   # root re-exec pass: skip, this is user-level
+    # LM Studio lives in the user's home, so run these as the desktop user via
+    # run_as_user — which works whether invoked bare OR via sudo (previously this
+    # early-returned when id==0, so `sudo distro-modectl switch ai` never loaded
+    # a model). Skips entirely when there's no desktop user.
+    [ -n "$(target_user)" ] || return 0
     if [ "${STOP_AI_MODEL:-false}" = "true" ]; then
-        command -v distro-ai-model >/dev/null 2>&1 && distro-ai-model unload >/dev/null 2>&1 || true
+        command -v distro-ai-model >/dev/null 2>&1 && run_as_user distro-ai-model unload >/dev/null 2>&1 || true
     fi
     if [ -n "${AI_AUTOSTART_USECASE:-}" ]; then
         # First AI-mode entry: auto-detect the hardware tier so the models that
-        # fit this box are what get loaded/preloaded. Idempotent (only when no
-        # tier is recorded yet) and failure-tolerant (the datacenter guard exits
-        # non-zero to route server-class GPUs to Server mode — that must not
-        # break the mode switch).
+        # fit this box are what get loaded/preloaded. Failure-tolerant (the
+        # datacenter guard exits non-zero to route server-class GPUs to Server
+        # mode — that must not break the mode switch).
         if command -v distro-ai-detect-tier >/dev/null 2>&1 \
            && [ ! -f "${XDG_CONFIG_HOME:-$HOME/.config}/refract-ai/tier" ]; then
-            distro-ai-detect-tier --yes >/dev/null 2>&1 \
+            run_as_user distro-ai-detect-tier --yes >/dev/null 2>&1 \
                 || echo "Note: AI hardware-tier auto-detect didn't complete (server-class GPU? run distro-ai-detect-tier). Using defaults." >&2
         fi
         if command -v distro-ai-model >/dev/null 2>&1; then
-            distro-ai-model use "$AI_AUTOSTART_USECASE" \
+            run_as_user distro-ai-model use "$AI_AUTOSTART_USECASE" \
                 || echo "WARNING: distro-ai-model failed to load the '$AI_AUTOSTART_USECASE' model — the mode still switched, but no model is loaded. Check: distro-ai-model status" >&2
         else
             echo "WARNING: distro-ai-model not found — install modes/ai/bin/distro-ai-model (and run modes/ai/setup/) to auto-load a model in AI mode." >&2
@@ -172,15 +205,15 @@ apply_pinned_apps() {
         echo "NOTE: gsettings not found — skipping favorite-apps pin (GNOME-only feature)." >&2
         return 0
     fi
-    if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
-        echo "NOTE: no DBUS_SESSION_BUS_ADDRESS — gsettings needs a real logged-in graphical session, not a root/SSH shell. Skipping favorite-apps pin." >&2
+    if [ -z "$(target_user)" ]; then
+        echo "NOTE: no desktop user — favorite-apps pin needs a graphical login, not a pure root/SSH shell. Skipping." >&2
         return 0
     fi
     local joined
     joined=$(printf "'%s', " "${apps[@]}")
     joined="[${joined%, }]"
     echo "Pinning to dock (GNOME favorite-apps, desktop-file IDs unverified): ${apps[*]}"
-    gsettings set org.gnome.shell favorite-apps "$joined" || echo "WARNING: gsettings call failed — desktop-file IDs may not match what's actually installed." >&2
+    run_as_user gsettings set org.gnome.shell favorite-apps "$joined" || echo "WARNING: gsettings call failed — desktop-file IDs may not match what's actually installed." >&2
 }
 
 apply_theme() {
@@ -192,28 +225,28 @@ apply_theme() {
     # Gaming/AI/Creative want every GPU cycle). GNOME-only, needs the invoking
     # user's session bus, so it runs pre-sudo like apply_pinned_apps.
     command -v gsettings >/dev/null 2>&1 || return 0
-    if [ -z "${DBUS_SESSION_BUS_ADDRESS:-}" ]; then
-        echo "NOTE: no session bus — skipping per-mode theme (needs a graphical login)." >&2
+    if [ -z "$(target_user)" ]; then
+        echo "NOTE: no desktop user — skipping per-mode theme (needs a graphical login)." >&2
         return 0
     fi
     if [ -n "${WALLPAPER:-}" ] && [ -f "$WALLPAPER" ]; then
-        gsettings set org.gnome.desktop.background picture-uri "file://$WALLPAPER" 2>/dev/null || true
-        gsettings set org.gnome.desktop.background picture-uri-dark "file://$WALLPAPER" 2>/dev/null || true
-        gsettings set org.gnome.desktop.background picture-options 'zoom' 2>/dev/null || true
+        run_as_user gsettings set org.gnome.desktop.background picture-uri "file://$WALLPAPER" 2>/dev/null || true
+        run_as_user gsettings set org.gnome.desktop.background picture-uri-dark "file://$WALLPAPER" 2>/dev/null || true
+        run_as_user gsettings set org.gnome.desktop.background picture-options 'zoom' 2>/dev/null || true
     fi
-    gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
+    run_as_user gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark' 2>/dev/null || true
     # Keep the macOS (WhiteSur) look consistent across ALL modes — do not revert
     # to Yaru. WhiteSur-Dark ships system-wide via iso 0300-macos-look.chroot.
-    gsettings set org.gnome.desktop.interface gtk-theme 'WhiteSur-Dark' 2>/dev/null || true
-    gsettings set org.gnome.desktop.interface icon-theme 'WhiteSur-dark' 2>/dev/null || true
-    gsettings set org.gnome.shell.extensions.user-theme name 'WhiteSur-Dark' 2>/dev/null || true
+    run_as_user gsettings set org.gnome.desktop.interface gtk-theme 'WhiteSur-Dark' 2>/dev/null || true
+    run_as_user gsettings set org.gnome.desktop.interface icon-theme 'WhiteSur-dark' 2>/dev/null || true
+    run_as_user gsettings set org.gnome.shell.extensions.user-theme name 'WhiteSur-Dark' 2>/dev/null || true
     # Liquid glass (frosted blur via the Blur-my-Shell extension): Normal ONLY.
     if command -v gnome-extensions >/dev/null 2>&1; then
         if [ "${LIQUID_GLASS:-false}" = "true" ]; then
-            gnome-extensions enable blur-my-shell@aunetx 2>/dev/null \
+            run_as_user gnome-extensions enable blur-my-shell@aunetx 2>/dev/null \
                 || echo "NOTE: could not enable Blur-my-Shell (install it / new-session needed) — glass off." >&2
         else
-            gnome-extensions disable blur-my-shell@aunetx 2>/dev/null || true
+            run_as_user gnome-extensions disable blur-my-shell@aunetx 2>/dev/null || true
         fi
     fi
     echo "Applied ${MODE_NAME} look: macOS-style (WhiteSur-Dark)${WALLPAPER:+ + wallpaper}, liquid-glass=${LIQUID_GLASS:-false}."
@@ -250,6 +283,9 @@ do_switch() {
         for svc in "${DISABLE_SERVICES[@]:-}"; do
             if [[ "$svc" =~ ^(gdm|gdm3|sddm|lightdm)$ ]]; then
                 confirm_or_abort "This will disable the display manager ($svc) — your desktop session will not restart automatically next boot. Continue?"
+                # Confirmed once — forward --yes across the sudo re-exec so the
+                # root pass doesn't prompt a second time.
+                ASSUME_YES=true
                 break
             fi
         done

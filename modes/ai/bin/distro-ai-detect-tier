@@ -114,6 +114,14 @@ gather_gpus() {
 # "HGX B200 NVL72" and defeat the guard.
 classify_gpu() {
     local n; n="$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')"
+    # AMD Instinct datacenter cards report ONLY their PCI device id via sysfs
+    # (gather_gpus emits "AMD GPU 0xNNNN"), never a human name like "MI300X" — so
+    # match the amdgpu device ids directly, or the guard would miss them:
+    #   MI300 family 0x74a0/74a1/74a2/74a5/74a9 · MI200 0x7408/740c/740f · MI100 0x7388/738c/738e
+    case "$n" in
+        *0x74a0*|*0x74a1*|*0x74a2*|*0x74a5*|*0x74a9*|*0x7408*|*0x740c*|*0x740f*|*0x7388*|*0x738c*|*0x738e*)
+            echo datacenter; return ;;
+    esac
     # Note: *b100*/*b200* also match GB100/GB200 (Grace-Blackwell) by substring.
     case "$n" in
         *a100*|*a800*|*h100*|*h200*|*h800*|*b100*|*b200*|\

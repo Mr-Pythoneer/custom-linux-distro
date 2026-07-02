@@ -56,6 +56,15 @@ rm -f "$PACKAGE_LISTS/calamares.list.chroot"
 rm -rf "$INCLUDES/etc/calamares"
 rm -f "$INCLUDES/usr/share/applications/install-refract-os.desktop"
 rm -rf "$INCLUDES/usr/share/initramfs-tools/scripts/casper-bottom"
+
+# The macOS look (WhiteSur theme + dock + liquid-glass) is a DESKTOP feature.
+# Strip its package list + build hook from headless strains so server/cloud
+# images don't drag in GNOME theme tooling (sassc, gnome-shell-extensions, ...)
+# or spend build time compiling WhiteSur for an image with no desktop.
+HOOKS_DIR="$(dirname "${BASH_SOURCE[0]}")/config/hooks"
+if [[ " ${HEADLESS_STRAINS[*]} " == *" $STRAIN "* ]]; then
+    rm -f "$PACKAGE_LISTS/macos-look.list.chroot" "$HOOKS_DIR/0300-macos-look.chroot"
+fi
 if [[ ! " ${HEADLESS_STRAINS[*]} " == *" $STRAIN "* ]]; then
     echo -e "\033[36mWiring in Calamares (installer config, untested -- see iso/calamares/README.md)...\033[0m"
     echo "calamares" > "$PACKAGE_LISTS/calamares.list.chroot"

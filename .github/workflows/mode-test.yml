@@ -18,7 +18,7 @@ name: mode-test
 #               exact QEMU/VNC/serial/monitor recipe) and, over VNC, opens a
 #               terminal and runs `sudo distro-modectl switch <mode> --yes` for a
 #               representative subset (gaming/ai/server), screenshotting the
-#               desktop before/after so the wallpaper + Yaru accent VISIBLY change
+#               desktop before/after so the per-mode wallpaper VISIBLY changes
 #               between modes. This is the visual proof the modes transform the
 #               RUNNING desktop. FPS / LLM tokens-per-sec / power-draw NUMBERS are
 #               hardware-only (real GPU box / Pi) and out of scope here.
@@ -207,8 +207,9 @@ jobs:
           shot 02-terminal-open
 
           # For a representative subset, run the real switcher and screenshot the
-          # desktop AFTER each switch. Wallpaper + Yaru accent (gaming=red,
-          # ai=blue, server=viridian) should VISIBLY differ between shots. --yes
+          # desktop AFTER each switch. The per-mode WALLPAPER should VISIBLY differ
+          # between shots; the macOS WhiteSur GTK/icon theme is intentionally kept
+          # CONSTANT across modes (no per-mode accent recolor anymore). --yes
           # auto-confirms server's display-manager prompt; passwordless sudo on
           # the casper live user makes `sudo` non-interactive.
           switch_and_shot() {   # switch_and_shot <mode> <shotname>
@@ -222,9 +223,9 @@ jobs:
           # gaming last-but-one and server LAST on purpose: server disables gdm
           # (--now), which can tear down the session, so capture it after the
           # others. ai in the middle. Each shot is the running desktop post-switch.
-          switch_and_shot gaming 03-gaming-red
-          switch_and_shot ai     04-ai-blue
-          switch_and_shot server 05-server-viridian
+          switch_and_shot gaming 03-gaming
+          switch_and_shot ai     04-ai
+          switch_and_shot server 05-server
 
           shot 06-final
           mon "quit" || true
@@ -238,7 +239,7 @@ jobs:
 
           # Assert SOMETHING rendered on the final desktop shot (>1 distinct pixel
           # value => not a blank screen). Same guard boot-smoke uses. This proves
-          # a live desktop was driven; the human-visible accent/wallpaper change
+          # a live desktop was driven; the human-visible wallpaper change
           # between 03/04/05 is what the uploaded screenshots demonstrate.
           python3 - <<'PY'
           import sys, glob
@@ -248,7 +249,7 @@ jobs:
               parts = data.split(b"\n", 3)
               px = parts[-1]
               return len(set(px[i:i+3] for i in range(0, min(len(px), 3*1000000), 3)))
-          finals = sorted(glob.glob("shots/06-final.png") + glob.glob("shots/05-server-viridian.png"))
+          finals = sorted(glob.glob("shots/06-final.png") + glob.glob("shots/05-server.png"))
           # PNGs are compressed; re-decode via imagemagick would be needed for a
           # true pixel count, so just assert the files exist and are non-trivial.
           import os
@@ -258,9 +259,9 @@ jobs:
           PY
 
           echo "=================================================================="
-          echo "VISUAL PROOF: the uploaded screenshots (03-gaming-red / 04-ai-blue /"
-          echo "05-server-viridian) show the SAME running GNOME desktop with the"
-          echo "wallpaper + Yaru accent changed by each 'distro-modectl switch'."
+          echo "VISUAL PROOF: the uploaded screenshots (03-gaming / 04-ai / 05-server)"
+          echo "show the SAME running GNOME desktop with the per-mode WALLPAPER changed"
+          echo "by each 'distro-modectl switch' (the WhiteSur theme stays constant)."
           echo "NOT proven here (hardware-only, needs a real GPU box / Pi):"
           echo "  * in-game FPS from performance governor + pinned GPU clocks"
           echo "  * LLM tokens/sec + model load in AI mode (needs LM Studio + model)"

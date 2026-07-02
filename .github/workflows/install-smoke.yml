@@ -157,6 +157,7 @@ jobs:
           set -euo pipefail
           if [ -n "$INPUT_RUN" ]; then id="$INPUT_RUN"
           else id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build-iso.yml --status success --limit 1 --json databaseId -q '.[0].databaseId'); fi
+          [ -n "$id" ] || { echo "No successful build-iso run to install-smoke." >&2; exit 1; }
           echo "id=$id" >> "$GITHUB_OUTPUT"
 
       - name: Download ISO artifact

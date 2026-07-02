@@ -58,8 +58,19 @@ else
     if ! command -v ubuntu-drivers >/dev/null 2>&1; then
         sudo apt-get install -y ubuntu-drivers-common
     fi
-    echo -e "\033[36mInstalling ubuntu-drivers recommended Nvidia driver...\033[0m"
-    sudo ubuntu-drivers install nvidia
+    # Prefer the OPEN kernel module. The CLOSED module does NOT support Blackwell
+    # (RTX 50-series) — nvidia-smi reports "No devices found" — yet a plain
+    # `ubuntu-drivers install nvidia` frequently selects the closed recommended
+    # driver. So derive the newest available driver branch and install its -open
+    # variant; only fall back to the autoinstaller if no -open package exists.
+    REC_VER="$(ubuntu-drivers list 2>/dev/null | grep -oE 'nvidia-driver-[0-9]+' | grep -oE '[0-9]+' | sort -rn | head -n1)"
+    if [ -n "$REC_VER" ] && apt-cache show "nvidia-driver-${REC_VER}-open" >/dev/null 2>&1; then
+        echo -e "\033[36mInstalling nvidia-driver-${REC_VER}-open (open kernel module — Blackwell-safe)...\033[0m"
+        sudo apt-get install -y "nvidia-driver-${REC_VER}-open"
+    else
+        echo -e "\033[33mNo -open driver found in your enabled repos — falling back to ubuntu-drivers autoinstall, which may install the CLOSED module (NOT Blackwell-safe; add ppa:graphics-drivers/ppa for a newer -open).\033[0m" >&2
+        sudo ubuntu-drivers install nvidia
+    fi
     cat <<'EOF'
 
 NOTE for RTX 50-series / Blackwell (e.g. RTX 5090): the auto-selected driver
