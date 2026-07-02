@@ -84,8 +84,12 @@ jobs:
             -display none -vga std \
             -monitor unix:mon.sock,server,nowait \
             -pidfile qemu-a.pid -daemonize
+          # NOTE: -daemonize makes QEMU chdir to /, so the monitor's screendump
+          # must get an ABSOLUTE path (run 28569864278: all four dumps silently
+          # went to a nonexistent /shots/). socat still exits 0 on monitor
+          # errors, so also verify the file actually appeared.
           mon() { printf '%s\n' "$1" | socat - unix-connect:mon.sock >/dev/null; }
-          shot() { mon "screendump shots/$1.ppm"; sleep 1; }
+          shot() { mon "screendump $PWD/shots/$1.ppm"; sleep 1; [ -f "shots/$1.ppm" ] || echo "WARN: screendump $1 did not appear" >&2; }
           sleep 20;  shot t020-bootloader-kernel
           sleep 40;  shot t060-early-userspace
           sleep 60;  shot t120-late-boot
@@ -121,6 +125,7 @@ jobs:
           ls -lh shots/ || true
 
       - name: "Phase B: direct-kernel boot with serial console assertions"
+        if: ${{ !cancelled() }}
         run: |
           set -euo pipefail
           # Pull kernel+initrd out of the ISO (bsdtar reads iso9660).
@@ -130,7 +135,7 @@ jobs:
             -kernel extract/casper/vmlinuz -initrd extract/casper/initrd.img \
             -append "boot=casper console=ttyS0,115200 systemd.show_status=true" \
             -cdrom crucible.iso \
-            -display none -serial file:serial.log -pidfile qemu-b.pid -daemonize
+            -display none -serial "file:$PWD/serial.log" -pidfile "$PWD/qemu-b.pid" -daemonize
           # Poll the serial log for boot-progress markers, up to 8 minutes.
           ok_casper=""; ok_systemd=""
           for i in $(seq 1 96); do
