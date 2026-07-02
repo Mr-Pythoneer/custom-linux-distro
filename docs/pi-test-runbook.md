@@ -21,7 +21,7 @@ build (`TODO.md` §4: "verify cpupower/powerprofilesctl calls on a real
 
 ## What this box CANNOT do (don't try)
 
-- **Boot or install Crucible OS.** The ISO is `--architectures amd64` (x86_64);
+- **Boot or install Refract OS.** The ISO is `--architectures amd64` (x86_64);
   a Pi is arm64 and doesn't boot standard ISOs anyway (Pi firmware boot chain,
   not UEFI ISO). Porting the distro to Pi is a separate project, not a test.
 - **Build the ISO.** Wrong architecture and nowhere near enough RAM/disk.
@@ -40,7 +40,7 @@ build (`TODO.md` §4: "verify cpupower/powerprofilesctl calls on a real
    `sudo apt-get install -y zram-tools && sudo systemctl enable --now zramswap`
 3. Deps for the test matrix:
    `sudo apt-get install -y git shellcheck python3 jq curl`
-4. `git clone https://github.com/Mr-Pythoneer/crucible-os && cd crucible-os`
+4. `git clone https://github.com/Mr-Pythoneer/refract-os && cd refract-os`
 5. Run the table above top to bottom; file anything that differs from
    "Expected" as an issue with the raw output.
 

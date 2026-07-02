@@ -43,7 +43,7 @@ available. Falls back honestly (with a stderr note) to a non-NVMe SSD if no
 NVMe exists, or to `/var/tmp` if nothing non-rotational is found at all —
 never silently picks a spinning disk without saying so.
 
-`setup` creates the scratch directory, exports `CRUCIBLE_SCRATCH_DIR` via
+`setup` creates the scratch directory, exports `REFRACT_SCRATCH_DIR` via
 `/etc/profile.d/`, and best-effort sets Blender's temporary-files
 preference via `blender --background --python-expr`. DaVinci Resolve and
 ffmpeg have **no scriptable way to set this** (Resolve's cache/working-folder

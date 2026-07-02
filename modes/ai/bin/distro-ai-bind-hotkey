@@ -18,7 +18,7 @@ set -euo pipefail
 BINDING="${1:-<Super>space}"
 SCHEMA_DIR="org.gnome.settings-daemon.plugins.media-keys"
 PATH_BASE="/org/gnome/settings-daemon/plugins/media-keys/custom-keybindings"
-SLOT_NAME="crucible-ai-overlay"
+SLOT_NAME="refract-ai-overlay"
 SLOT_PATH="$PATH_BASE/$SLOT_NAME/"
 
 if ! command -v gsettings >/dev/null 2>&1; then
@@ -43,7 +43,7 @@ if [[ "$existing" != *"$SLOT_NAME"* ]]; then
     gsettings set "$SCHEMA_DIR" custom-keybindings "$new_list"
 fi
 
-gsettings set "$SCHEMA_DIR.custom-keybinding:$SLOT_PATH" name "Crucible OS — Ask AI"
+gsettings set "$SCHEMA_DIR.custom-keybinding:$SLOT_PATH" name "Refract OS — Ask AI"
 gsettings set "$SCHEMA_DIR.custom-keybinding:$SLOT_PATH" command "distro-ai-overlay"
 gsettings set "$SCHEMA_DIR.custom-keybinding:$SLOT_PATH" binding "$BINDING"
 

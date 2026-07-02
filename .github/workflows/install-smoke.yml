@@ -55,7 +55,7 @@ jobs:
       - name: Download ISO artifact
         uses: actions/download-artifact@v4
         with:
-          pattern: crucible-os-*
+          pattern: refract-os-*
           run-id: ${{ steps.run.outputs.id }}
           github-token: ${{ github.token }}
           merge-multiple: true
@@ -84,8 +84,8 @@ jobs:
           chk "modules/unpackfs.conf present"               '[ -f /mnt/sq/etc/calamares/modules/unpackfs.conf ]'
           chk "modules/partition.conf present"              '[ -f /mnt/sq/etc/calamares/modules/partition.conf ]'
           chk "modules/users.conf present"                  '[ -f /mnt/sq/etc/calamares/modules/users.conf ]'
-          chk "branding present"                            '[ -d /mnt/sq/etc/calamares/branding/crucibleos ]'
-          chk "install .desktop launcher present"           '[ -f /mnt/sq/usr/share/applications/install-crucible-os.desktop ]'
+          chk "branding present"                            '[ -d /mnt/sq/etc/calamares/branding/refractos ]'
+          chk "install .desktop launcher present"           '[ -f /mnt/sq/usr/share/applications/install-refract-os.desktop ]'
           chk "distro-modectl symlink in PATH"              '[ -L /mnt/sq/usr/local/bin/distro-modectl ]'
           chk "distro scripts rsynced into /opt/distro"     '[ -f /mnt/sq/opt/distro/modes/modectl/distro-modectl ]'
 
@@ -162,7 +162,7 @@ jobs:
       - name: Download ISO artifact
         uses: actions/download-artifact@v4
         with:
-          pattern: crucible-os-*
+          pattern: refract-os-*
           run-id: ${{ steps.run.outputs.id }}
           github-token: ${{ github.token }}
           merge-multiple: true
@@ -174,7 +174,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y qemu-system-x86 qemu-utils socat python3-pip
           pipx install vncdotool 2>/dev/null || pip install --user vncdotool
-          ISO=$(find iso-dl -name "*.iso" | head -n1); mv "$ISO" crucible.iso
+          ISO=$(find iso-dl -name "*.iso" | head -n1); mv "$ISO" refract.iso
           [ -e /dev/kvm ] && sudo chmod 666 /dev/kvm && echo "ACCEL=kvm" >> "$GITHUB_ENV" || echo "ACCEL=tcg" >> "$GITHUB_ENV"
           qemu-img create -f qcow2 target.qcow2 20G
 
@@ -184,7 +184,7 @@ jobs:
           export PATH="$HOME/.local/bin:$PATH"
           mkdir -p shots
           qemu-system-x86_64 -accel "$ACCEL" -m 4096 -smp 4 \
-            -cdrom crucible.iso -boot d \
+            -cdrom refract.iso -boot d \
             -drive file=target.qcow2,format=qcow2,if=virtio \
             -display none -vga std -vnc :0 \
             -monitor unix:mon.sock,server,nowait -pidfile qemu.pid -daemonize
@@ -200,7 +200,7 @@ jobs:
           # 28571437379 confirmed the dock's floppy icon is QEMU's default floppy
           # device, NOT the installer, and no desktop icon renders.)
           vd key super; sleep 3; shot 01a-overview
-          vd type "Install Crucible"; sleep 3; shot 01b-search
+          vd type "Install Refract"; sleep 3; shot 01b-search
           vd key enter; sleep 20
           shot 01c-after-launch
           # A polkit/pkexec prompt may appear (Calamares needs root). If so, the
@@ -214,7 +214,7 @@ jobs:
           shot 03-users
           # users page: type name, Tab to username (auto), Tab to password x2
           vd type "tester"; vd key tab; vd key tab
-          vd type "crucible"; vd key tab; vd type "crucible"; vd key tab
+          vd type "refract"; vd key tab; vd type "refract"; vd key tab
           sleep 2; vd key enter; sleep 6 # -> summary
           shot 04-summary
           vd key enter                   # Install

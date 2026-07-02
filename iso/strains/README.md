@@ -26,7 +26,7 @@ starting point for that class of machine.
 verified by actually running the copy/cleanup logic with a stubbed `lb`,
 see TODO.md) before calling `lb config`/`lb build`. The strain name also
 shows up in the ISO's `--iso-application` string and the output filename
-(`crucible-os-<strain>.iso`).
+(`refract-os-<strain>.iso`).
 
 ## What's real vs. what's a placeholder here
 

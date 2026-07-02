@@ -6,10 +6,10 @@ name: boot-smoke
 #
 # Two independent phases:
 #   A) Full-ISO boot (BIOS/SeaBIOS -> isolinux -> kernel): proves the
-#      bootloader path our config/hooks/500-crucible-bootfix.binary stages
+#      bootloader path our config/hooks/500-refract-bootfix.binary stages
 #      actually works. Asserted via QEMU screendumps (the live kernel args
 #      have no serial console), which are also uploaded as artifacts — the
-#      first-ever screenshots of Crucible OS running.
+#      first-ever screenshots of Refract OS running.
 #   B) Direct-kernel boot with console=ttyS0: extracts /casper/vmlinuz +
 #      initrd from the ISO and boots with a serial console for a real,
 #      greppable assertion that casper finds the squashfs and systemd
@@ -52,7 +52,7 @@ jobs:
       - name: Download ISO artifact
         uses: actions/download-artifact@v4
         with:
-          pattern: crucible-os-*
+          pattern: refract-os-*
           run-id: ${{ steps.run.outputs.id }}
           github-token: ${{ github.token }}
           merge-multiple: true
@@ -66,7 +66,7 @@ jobs:
           ls -lh iso-dl/
           ISO=$(find iso-dl -name "*.iso" | head -n1)
           [ -n "$ISO" ] || { echo "No .iso in the artifact." >&2; exit 1; }
-          mv "$ISO" crucible.iso
+          mv "$ISO" refract.iso
           if [ -e /dev/kvm ]; then
             sudo chmod 666 /dev/kvm
             echo "ACCEL=kvm" >> "$GITHUB_ENV"
@@ -80,7 +80,7 @@ jobs:
           set -euo pipefail
           mkdir -p shots
           qemu-system-x86_64 -accel "$ACCEL" -m 4096 -smp 4 \
-            -cdrom crucible.iso -boot d \
+            -cdrom refract.iso -boot d \
             -display none -vga std \
             -monitor unix:mon.sock,server,nowait \
             -pidfile qemu-a.pid -daemonize
@@ -129,12 +129,12 @@ jobs:
         run: |
           set -euo pipefail
           # Pull kernel+initrd out of the ISO (bsdtar reads iso9660).
-          mkdir -p extract && bsdtar -xf crucible.iso -C extract casper/vmlinuz casper/initrd.img
+          mkdir -p extract && bsdtar -xf refract.iso -C extract casper/vmlinuz casper/initrd.img
           ls -lh extract/casper/
           timeout 600 qemu-system-x86_64 -accel "$ACCEL" -m 4096 -smp 4 \
             -kernel extract/casper/vmlinuz -initrd extract/casper/initrd.img \
             -append "boot=casper console=ttyS0,115200 systemd.show_status=true" \
-            -cdrom crucible.iso \
+            -cdrom refract.iso \
             -display none -serial "file:$PWD/serial.log" -pidfile "$PWD/qemu-b.pid" -daemonize
           # Poll the serial log for boot-progress markers, up to 8 minutes.
           ok_casper=""; ok_systemd=""

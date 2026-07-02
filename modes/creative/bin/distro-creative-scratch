@@ -20,8 +20,8 @@
 
 set -euo pipefail
 
-SCRATCH_DIRNAME="crucible-creative-scratch"
-PROFILE_D_FILE="/etc/profile.d/crucible-creative-scratch.sh"
+SCRATCH_DIRNAME="refract-creative-scratch"
+PROFILE_D_FILE="/etc/profile.d/refract-creative-scratch.sh"
 
 detect_best_mount() {
     if ! command -v df >/dev/null 2>&1 || ! command -v lsblk >/dev/null 2>&1; then
@@ -97,15 +97,15 @@ case "${1:-}" in
 # directory, pointed at the fastest local NVMe (or best available non-rotational
 # mount) detected at setup time. Re-run 'distro-creative-scratch setup' after
 # adding/removing storage if this should be re-evaluated.
-export CRUCIBLE_SCRATCH_DIR="$scratch_dir"
+export REFRACT_SCRATCH_DIR="$scratch_dir"
 EOF
         chmod 644 "$PROFILE_D_FILE"
 
         echo "Scratch directory: $scratch_dir"
-        echo "CRUCIBLE_SCRATCH_DIR exported via $PROFILE_D_FILE (takes effect in new login sessions)"
+        echo "REFRACT_SCRATCH_DIR exported via $PROFILE_D_FILE (takes effect in new login sessions)"
 
         if command -v blender >/dev/null 2>&1; then
-            echo "Setting Blender's temporary-files preference to \$CRUCIBLE_SCRATCH_DIR..."
+            echo "Setting Blender's temporary-files preference to \$REFRACT_SCRATCH_DIR..."
             if blender --background --python-expr "
 import bpy
 bpy.context.preferences.filepaths.temporary_directory = '$scratch_dir'
@@ -118,7 +118,7 @@ bpy.ops.wm.save_userpref()
             fi
         else
             echo "Blender not installed yet -- once it is, set Edit > Preferences > File Paths >"
-            echo "Temporary Files = \$CRUCIBLE_SCRATCH_DIR manually, or re-run this script after installing it."
+            echo "Temporary Files = \$REFRACT_SCRATCH_DIR manually, or re-run this script after installing it."
         fi
 
         echo
@@ -128,7 +128,7 @@ bpy.ops.wm.save_userpref()
         echo "  Project Settings > General > Working Folders / Cache Files > $scratch_dir"
         echo
         echo "ffmpeg has no dedicated scratch-dir setting either; if you want render"
-        echo "intermediates to land on this disk, pass output paths under \$CRUCIBLE_SCRATCH_DIR explicitly."
+        echo "intermediates to land on this disk, pass output paths under \$REFRACT_SCRATCH_DIR explicitly."
         ;;
     *)
         echo "Usage: $(basename "$0") detect | setup" >&2

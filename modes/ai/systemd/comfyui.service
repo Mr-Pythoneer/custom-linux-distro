@@ -1,4 +1,4 @@
-# Crucible OS — ComfyUI image-generation server on port 8188 (optional).
+# Refract OS — ComfyUI image-generation server on port 8188 (optional).
 #
 # USER service. Install:
 #   mkdir -p ~/.config/systemd/user
@@ -10,7 +10,7 @@
 # than ~/ComfyUI. %h expands to the user's home dir.
 
 [Unit]
-Description=Crucible OS — ComfyUI image generation (port 8188)
+Description=Refract OS — ComfyUI image generation (port 8188)
 After=default.target
 
 [Service]

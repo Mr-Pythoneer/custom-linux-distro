@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Pre-flight check for Crucible OS — run this on the build host (the OVH
+# Pre-flight check for Refract OS — run this on the build host (the OVH
 # server / the 5090 box) BEFORE the expensive `iso/build.sh`, so the first
 # real build doesn't fail an hour in on something checkable in seconds.
 #

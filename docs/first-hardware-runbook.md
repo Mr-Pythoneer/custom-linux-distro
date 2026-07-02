@@ -23,8 +23,8 @@ standalone → (5) our scripts function → (6) repeat across strains.
 ## Stage 0 — Pre-flight (on whichever host you're about to build on)
 
 ```bash
-git clone https://github.com/Mr-Pythoneer/crucible-os.git
-cd crucible-os
+git clone https://github.com/Mr-Pythoneer/refract-os.git
+cd refract-os
 ./preflight.sh                 # build-host readiness: tools, static checks, network, apt
 ```
 **Pass:** "No blocking failures." Investigate any `[FAIL]` before going further;
@@ -41,7 +41,7 @@ sudo apt-get update && sudo apt-get install -y live-build
 cd iso
 sudo ./build.sh workstation
 ```
-**Pass:** `crucible-os-workstation.iso` is produced.
+**Pass:** `refract-os-workstation.iso` is produced.
 **Expect to hit at least one real bug on this first pass** — nothing in `iso/`
 has ever run `lb build`. Common first-run failure points: a package name not in
 the enabled components (check `--archive-areas`), `lb config` flag drift vs the
@@ -53,11 +53,11 @@ commit, re-run.
 ```bash
 sudo apt-get install -y qemu-system-x86 qemu-utils
 qemu-system-x86_64 -enable-kvm -m 4096 -smp 4 \
-  -cdrom crucible-os-workstation.iso -vnc :0
+  -cdrom refract-os-workstation.iso -vnc :0
 # connect a VNC viewer to <server-ip>:5900 (tunnel over SSH), or add -serial mon:stdio
 ```
 **Pass:** GRUB → live session reaches a desktop (or login). **Check the
-"Install Crucible OS" icon is on the live desktop** (the casper-bottom hook).
+"Install Refract OS" icon is on the live desktop** (the casper-bottom hook).
 
 ### Stage 3 — Installer works
 

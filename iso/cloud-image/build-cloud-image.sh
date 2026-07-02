@@ -37,10 +37,10 @@ for tool in debootstrap parted mkfs.ext4 losetup partprobe grub-install qemu-img
 done
 
 SIZE_GB="${1:-4}"
-WORK_DIR="$(mktemp -d /tmp/crucible-cloud-build.XXXXXX)"
+WORK_DIR="$(mktemp -d /tmp/refract-cloud-build.XXXXXX)"
 RAW_IMG="$WORK_DIR/cloud.img"
 MOUNT_DIR="$WORK_DIR/rootfs"
-OUT_QCOW2="crucible-os-cloud.qcow2"
+OUT_QCOW2="refract-os-cloud.qcow2"
 
 cleanup() {
     set +e

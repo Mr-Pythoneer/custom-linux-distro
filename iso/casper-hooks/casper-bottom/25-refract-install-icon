@@ -1,6 +1,6 @@
 #!/bin/sh
 #
-# Casper-bottom hook: drops the "Install Crucible OS" launcher onto the live
+# Casper-bottom hook: drops the "Install Refract OS" launcher onto the live
 # user's Desktop during live boot. This is the same documented mechanism
 # real live-build+Calamares distros use (verified against
 # maui-linux/calamares-casper's casper-bottom/25calamares script, fetched
@@ -14,7 +14,7 @@
 # Calamares wired in at all) -- see iso/build.sh's HEADLESS_STRAINS check.
 
 PREREQ=""
-DESCRIPTION="Adding Crucible OS install icon to live session user..."
+DESCRIPTION="Adding Refract OS install icon to live session user..."
 
 prereqs()
 {
@@ -33,7 +33,7 @@ load_confmodule
 
 log_begin_msg "$DESCRIPTION"
 
-DESKTOP_FILE=/usr/share/applications/install-crucible-os.desktop
+DESKTOP_FILE=/usr/share/applications/install-refract-os.desktop
 if [ -f "/root$DESKTOP_FILE" ] && [ -n "$USERNAME" ]; then
     chroot /root install -d -o "$USERNAME" -g "$USERNAME" "/home/$USERNAME/Desktop"
     chroot /root install -D -o "$USERNAME" -g "$USERNAME" "$DESKTOP_FILE" "/home/$USERNAME/Desktop/$(basename "$DESKTOP_FILE")"

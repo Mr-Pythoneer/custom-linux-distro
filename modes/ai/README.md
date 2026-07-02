@@ -29,7 +29,7 @@ below are what `distro-ai-setup` runs, if you'd rather do them by hand:
 
 ```bash
 # 0) Detect the hardware tier (VRAM/RAM/laptop), pick laptop profile + image model
-distro-ai-detect-tier                 # writes ~/.config/crucible-ai/{tier,profile,image,vram_mib}
+distro-ai-detect-tier                 # writes ~/.config/refract-ai/{tier,profile,image,vram_mib}
                                       # (--yes = defaults, --print = preview, --tier X = force)
 
 # Text + vision LLMs (LM Studio) — 02 auto-reads the detected tier
@@ -65,8 +65,8 @@ RAM, and laptop-vs-desktop, then maps VRAM → a tier. Each tier has its own
 On a **laptop** you also pick a power **profile** — `efficiency` (fast/small
 models, least battery) / `balance` / `power` (same as a desktop). The profile
 decides which variant `distro-ai-model use <case>` loads by default; desktops
-default to `power`. Override anything: `CRUCIBLE_AI_TIER=mid`,
-`CRUCIBLE_AI_PROFILE=efficiency`, or `distro-ai-detect-tier --tier high`.
+default to `power`. Override anything: `REFRACT_AI_TIER=mid`,
+`REFRACT_AI_PROFILE=efficiency`, or `distro-ai-detect-tier --tier high`.
 
 **Multi-GPU:** `distro-ai-detect-tier` **sums** VRAM across *homogeneous
 same-model* cards (LM Studio 0.4.15+ pools them via layer-split), so 2×48GB → a
@@ -80,7 +80,7 @@ A100/H100/H200/B200/GB200/MI300X/Gaudi/Grace card, `distro-ai-detect-tier` stops
 and points you to `distro-modectl switch server` (headless `lms`/vLLM) rather
 than a desktop LM Studio GUI — the honest shape for that hardware. An H100/H200
 **NVL** card in a workstation is allowed-with-warning. Force the desktop path
-with `--tier ultra` or `CRUCIBLE_ALLOW_DATACENTER=1`.
+with `--tier ultra` or `REFRACT_ALLOW_DATACENTER=1`.
 
 Then load a model and use it:
 
@@ -110,8 +110,8 @@ VRAM — `distro-ai-model list` prints the active tier's actual menu.
 | `image` (ComfyUI) | FLUX.1-dev³ | SDXL |
 
 `distro-ai-model list | use <case> [variant] | load <id> | server start|stop |
-status | unload`. It resolves the active tier from `CRUCIBLE_AI_TIER` →
-`~/.config/crucible-ai/tier` → `max`, and the default variant from the profile.
+status | unload`. It resolves the active tier from `REFRACT_AI_TIER` →
+`~/.config/refract-ai/tier` → `max`, and the default variant from the profile.
 
 **Verified caveats (the reason this was researched, not guessed):**
 - ¹ **Llama-3.3-70B** at Q4_K_M is ~42.5GB — it does NOT fit the 32GB 5090, so

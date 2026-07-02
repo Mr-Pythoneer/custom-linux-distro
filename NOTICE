@@ -1,4 +1,4 @@
-Crucible OS is a Linux distro build (live-build + Calamares config) plus a
+Refract OS is a Linux distro build (live-build + Calamares config) plus a
 set of setup/mode-switching scripts. It does not vendor, fork, or modify any
 of the upstream projects it installs or builds on — they are pulled in as
 ordinary packages/repos and configured via the files in modes/, drivers/,
@@ -19,5 +19,5 @@ and iso/.
 - WhiteSur GTK/icon/shell themes (vinceliuice) — installed by
   modes/normal/setup/01-install-whitesur-theme.sh, MIT License.
 
-Crucible OS's own scripts, configs, and documentation are MIT-licensed — see
+Refract OS's own scripts, configs, and documentation are MIT-licensed — see
 LICENSE.

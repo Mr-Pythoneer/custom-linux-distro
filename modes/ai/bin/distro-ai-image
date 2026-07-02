@@ -15,7 +15,7 @@ set -euo pipefail
 
 COMFY_DIR="${COMFYUI_DIR:-$HOME/ComfyUI}"
 PORT=8188
-PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/crucible-comfyui.pid"
+PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/refract-comfyui.pid"
 
 is_running() {
     if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then return 0; fi
@@ -36,11 +36,11 @@ case "${1:-start}" in
             echo "ComfyUI already running on port $PORT."
         else
             echo "Starting ComfyUI on port $PORT ..."
-            ( cd "$COMFY_DIR" && nohup ./venv/bin/python main.py --port "$PORT" >"${XDG_RUNTIME_DIR:-/tmp}/crucible-comfyui.log" 2>&1 & echo $! > "$PIDFILE" )
+            ( cd "$COMFY_DIR" && nohup ./venv/bin/python main.py --port "$PORT" >"${XDG_RUNTIME_DIR:-/tmp}/refract-comfyui.log" 2>&1 & echo $! > "$PIDFILE" )
             sleep 2
         fi
         open_ui
-        echo "Logs: ${XDG_RUNTIME_DIR:-/tmp}/crucible-comfyui.log"
+        echo "Logs: ${XDG_RUNTIME_DIR:-/tmp}/refract-comfyui.log"
         ;;
     stop)
         if [ -f "$PIDFILE" ] && kill -0 "$(cat "$PIDFILE")" 2>/dev/null; then

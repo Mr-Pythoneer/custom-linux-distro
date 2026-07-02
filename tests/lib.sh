@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Tiny assertion library for the Crucible OS test suite. Source from each
+# Tiny assertion library for the Refract OS test suite. Source from each
 # test_*.sh. Works the same under macOS (homebrew bash) and the Ubuntu CI
 # runner — which matters: some behaviour (GNU vs BSD coreutils) only shows up
 # on the real target OS, so these tests exist to run in CI, not just locally.

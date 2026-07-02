@@ -5,7 +5,7 @@
 # 04-download-image-models.sh.
 #
 # The tier (cpu/entry/mid/high/max) selects which catalog to pull from. It comes
-# from --tier, else $CRUCIBLE_AI_TIER, else ~/.config/crucible-ai/tier (written
+# from --tier, else $REFRACT_AI_TIER, else ~/.config/refract-ai/tier (written
 # by distro-ai-detect-tier), else 'max'. Default pulls ALL of the tier's models.
 #
 # Usage:
@@ -22,7 +22,7 @@ if [ "$(id -u)" -eq 0 ]; then
 fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/crucible-ai"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/refract-ai"
 
 # --tier <t> may lead the args; otherwise fall back to env/config/default.
 TIER=""
@@ -31,7 +31,7 @@ if [ "${1:-}" = "--tier" ]; then
     [ -n "$TIER" ] || { echo "--tier requires a tier name (cpu entry mid high max ultra)." >&2; exit 1; }
     shift 2   # safe: a non-empty $2 guarantees $# >= 2, so this never aborts under set -e
 fi
-[ -n "$TIER" ] || TIER="${CRUCIBLE_AI_TIER:-$(cat "$CONFIG_HOME/tier" 2>/dev/null || echo max)}"
+[ -n "$TIER" ] || TIER="${REFRACT_AI_TIER:-$(cat "$CONFIG_HOME/tier" 2>/dev/null || echo max)}"
 CATALOG="$SCRIPT_DIR/../config/models.catalog.$TIER.json"
 [ -f "$CATALOG" ] || { echo "No catalog for tier '$TIER' ($CATALOG). Tiers: cpu entry mid high max ultra." >&2; exit 1; }
 echo "Tier: $TIER  ($CATALOG)"

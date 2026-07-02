@@ -1,4 +1,4 @@
-/* Crucible OS Calamares install slideshow.
+/* Refract OS Calamares install slideshow.
  *
  * Real QML syntax, verified against Calamares' own default slideshow
  * source (calamares/calamares src/branding/default/show.qml) and its
@@ -43,7 +43,7 @@ Presentation
             anchors.top: introLogo.bottom
             anchors.topMargin: 24
             anchors.horizontalCenter: parent.horizontalCenter
-            text: qsTr("Crucible OS")
+            text: qsTr("Refract OS")
             font.pixelSize: 32
             font.bold: true
             color: "#ffffff"

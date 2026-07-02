@@ -1,0 +1,88 @@
+#!/bin/sh
+# Refract OS identity — strip EVERY visible sign of Ubuntu and replace with
+# Refract branding. Runs inside the chroot (config/hooks/*.chroot is the path
+# this live-build fork actually scans). Static files (os-release, wallpaper,
+# glib override, gdm dconf) arrive via includes.chroot, applied before hooks.
+set -e
+CL=/usr/share/refract/logo.png
+
+# 1) BOOT SPLASH — replace every plymouth logo/watermark image with our logo,
+#    so whichever theme renders shows the refract, not the Ubuntu circle/word.
+if [ -f "$CL" ]; then
+    find /usr/share/plymouth -type f \
+        \( -iname "*logo*.png" -o -iname "watermark*.png" -o -iname "*ubuntu*.png" \) \
+        -exec cp "$CL" {} \; 2>/dev/null || true
+fi
+
+# 2) GRUB — the installed-system boot menu title (live boot is our own isolinux).
+if [ -f /etc/default/grub ]; then
+    if grep -q '^GRUB_DISTRIBUTOR=' /etc/default/grub; then
+        sed -i 's/^GRUB_DISTRIBUTOR=.*/GRUB_DISTRIBUTOR="Refract OS"/' /etc/default/grub
+    else
+        echo 'GRUB_DISTRIBUTOR="Refract OS"' >> /etc/default/grub
+    fi
+fi
+
+# 3) MOTD / legal — the "Welcome to Ubuntu ..." shell login banner + ads.
+[ -f /etc/legal ] && : > /etc/legal || true
+for m in 00-header 10-help-text 50-motd-news 88-esm-announce \
+         91-release-upgrade 91-contract-ua-esm-status 92-unattended-upgrades; do
+    [ -e "/etc/update-motd.d/$m" ] && chmod -x "/etc/update-motd.d/$m" 2>/dev/null || true
+done
+cat > /etc/update-motd.d/00-refract <<'M'
+#!/bin/sh
+printf '\n  Refract OS 1.0 (Forge)  —  one install, five modes, local-first AI\n'
+printf '  switch look+behaviour:  distro-modectl switch gaming|ai|server|creative|normal\n\n'
+M
+chmod +x /etc/update-motd.d/00-refract 2>/dev/null || true
+
+# 4) SESSION NAMES shown in the GDM login gear menu.
+for s in /usr/share/xsessions/ubuntu.desktop /usr/share/xsessions/ubuntu-xorg.desktop \
+         /usr/share/wayland-sessions/ubuntu.desktop /usr/share/wayland-sessions/ubuntu-wayland.desktop; do
+    [ -f "$s" ] && sed -i 's/^Name=.*/Name=Refract OS/; s/^Comment=.*/Comment=Refract OS desktop/' "$s" 2>/dev/null || true
+done
+
+# 5) The Ubuntu "swirl" — it appears as the dock "Show Applications" button and
+#    the GNOME About logo. It's shipped under SEVERAL names (ubuntu-logo,
+#    start-here, distributor-logo), not just "ubuntu-logo", so match each and
+#    replace by EXACT extension: a real SVG for .svg targets (a PNG written into
+#    a .svg file renders blank), our PNG for .png targets.
+SVG=/usr/share/refract/logo.svg
+for name in ubuntu-logo start-here distributor-logo ubuntu-logo-icon; do
+    find /usr/share/icons /usr/share/pixmaps -type f \
+        \( -iname "${name}.png" -o -iname "${name}@2x.png" -o -iname "${name}-icon.png" \) \
+        -exec cp "$CL" {} \; 2>/dev/null || true
+    [ -f "$SVG" ] && find /usr/share/icons /usr/share/pixmaps -type f -iname "${name}.svg" \
+        -exec cp "$SVG" {} \; 2>/dev/null || true
+done
+# GNOME About distributor logo (os-release LOGO=refract resolves to this).
+mkdir -p /usr/share/icons/hicolor/256x256/apps
+cp "$CL" /usr/share/icons/hicolor/256x256/apps/refract.png 2>/dev/null || true
+for theme in hicolor Yaru WhiteSur WhiteSur-dark; do
+    [ -d "/usr/share/icons/$theme" ] && command -v gtk-update-icon-cache >/dev/null 2>&1 \
+        && gtk-update-icon-cache -f "/usr/share/icons/$theme" 2>/dev/null || true
+done
+
+# 6) Compile the GNOME schema override (wallpaper/dark default) + dconf dbs
+#    (gdm greeter branding ships as a dconf db via includes.chroot).
+command -v glib-compile-schemas >/dev/null 2>&1 && glib-compile-schemas /usr/share/glib-2.0/schemas 2>/dev/null || true
+command -v dconf >/dev/null 2>&1 && dconf update 2>/dev/null || true
+
+# 7) BOOT SPLASH default theme — make OUR minimal script theme the active one so
+#    NOTHING Ubuntu can composite (the stock bgrt/spinner themes draw a small
+#    Ubuntu logo at the top that survives image-replacement). Our refract theme
+#    draws only our logo + boot text, so the splash is 100% ours.
+if [ -d /usr/share/plymouth/themes/refract ]; then
+    if command -v plymouth-set-default-theme >/dev/null 2>&1; then
+        plymouth-set-default-theme refract 2>/dev/null || true
+    else
+        update-alternatives --install /usr/share/plymouth/themes/default.plymouth \
+            default.plymouth /usr/share/plymouth/themes/refract/refract.plymouth 200 2>/dev/null || true
+        update-alternatives --set default.plymouth \
+            /usr/share/plymouth/themes/refract/refract.plymouth 2>/dev/null || true
+    fi
+fi
+
+# 8) Rebuild the initramfs so the rebranded splash + default theme are embedded.
+update-initramfs -u 2>/dev/null || true
+echo "refract-identity: de-Ubuntu'd splash/grub/motd/sessions/icons + GNOME defaults."

@@ -1,4 +1,4 @@
-# Crucible OS Plymouth splash — logo centred on near-black, boot text below.
+# Refract OS Plymouth splash — logo centred on near-black, boot text below.
 # Deliberately minimal (no external bar/dot images) so it can't fail to load.
 Window.SetBackgroundTopColor(0.043, 0.043, 0.051);
 Window.SetBackgroundBottomColor(0.043, 0.043, 0.051);

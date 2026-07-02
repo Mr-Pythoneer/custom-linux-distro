@@ -39,7 +39,7 @@
       "category": "creative",
       "status": "broken",
       "winetricks_verbs": [],
-      "notes": "The Creative Cloud installer/licensing service and the apps themselves are not reliably functional under Wine -- this is the same DRM/licensing-service problem flagged in DESIGN.md §2/§4 for Premiere/After Effects. Don't attempt; see modes/creative/README.md for the native alternatives Crucible OS actually ships (FreeCAD, Blender, DaVinci Resolve, Kdenlive).",
+      "notes": "The Creative Cloud installer/licensing service and the apps themselves are not reliably functional under Wine -- this is the same DRM/licensing-service problem flagged in DESIGN.md §2/§4 for Premiere/After Effects. Don't attempt; see modes/creative/README.md for the native alternatives Refract OS actually ships (FreeCAD, Blender, DaVinci Resolve, Kdenlive).",
       "source": "DESIGN.md §2/§4; WineHQ AppDB"
     },
     {

@@ -1,8 +1,0 @@
-[Plymouth Theme]
-Name=Crucible OS
-Description=Crucible OS boot splash — molten crucible on dark
-ModuleName=script
-
-[script]
-ImageDir=/usr/share/plymouth/themes/crucible
-ScriptFile=/usr/share/plymouth/themes/crucible/crucible.script

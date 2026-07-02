@@ -1,5 +1,5 @@
 # Calamares branding descriptor. componentName must match the directory
-# name (crucibleos) and the `branding:` value in settings.conf.
+# name (refractos) and the `branding:` value in settings.conf.
 #
 # logo.png/welcome.png are real now (built from branding/src/ via
 # branding/build.sh, copied here automatically). show.qml is real now too --
@@ -7,17 +7,17 @@
 # README (slideshowAPI 2: async load, onActivate()/onLeave() lifecycle),
 # not fabricated -- see README.md "What's missing, not faked."
 
-componentName: crucibleos
+componentName: refractos
 
 strings:
-  productName: "Crucible OS"
-  shortProductName: "Crucible OS"
+  productName: "Refract OS"
+  shortProductName: "Refract OS"
   version: "0.1"
-  versionedName: "Crucible OS 0.1"
-  shortVersionedName: "Crucible OS 0.1"
-  bootloaderEntryName: "Crucible OS"
-  productUrl: "https://mr-pythoneer.github.io/crucible-os/"
-  supportUrl: "https://github.com/Mr-Pythoneer/crucible-os/issues"
+  versionedName: "Refract OS 0.1"
+  shortVersionedName: "Refract OS 0.1"
+  bootloaderEntryName: "Refract OS"
+  productUrl: "https://mr-pythoneer.github.io/refract-os/"
+  supportUrl: "https://github.com/Mr-Pythoneer/refract-os/issues"
 
 images:
   productLogo: "logo.png"

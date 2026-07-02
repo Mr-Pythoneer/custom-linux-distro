@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Rasterizes the SVG sources in branding/src/ to the PNGs Calamares branding
-# expects (see iso/calamares/branding/crucibleos/branding.desc) and to a
+# expects (see iso/calamares/branding/refractos/branding.desc) and to a
 # square favicon for the website.
 #
 # Built/verified on macOS using `qlmanage -t` (QuickLook's own thumbnail
@@ -24,7 +24,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SRC="$SCRIPT_DIR/src"
 OUT="$SCRIPT_DIR/out"
-CALAMARES_DIR="$SCRIPT_DIR/../iso/calamares/branding/crucibleos"
+CALAMARES_DIR="$SCRIPT_DIR/../iso/calamares/branding/refractos"
 
 mkdir -p "$OUT"
 

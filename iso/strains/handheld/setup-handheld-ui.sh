@@ -43,7 +43,7 @@ echo -e "\033[36mScaling UI text for a small/touch screen (factor: $TEXT_SCALE).
 gsettings set org.gnome.desktop.interface text-scaling-factor "$TEXT_SCALE"
 
 AUTOSTART_DIR="$HOME/.config/autostart"
-AUTOSTART_FILE="$AUTOSTART_DIR/crucible-steam-bigpicture.desktop"
+AUTOSTART_FILE="$AUTOSTART_DIR/refract-steam-bigpicture.desktop"
 if command -v steam >/dev/null 2>&1; then
     echo -e "\033[36mEnabling Steam Big Picture autostart...\033[0m"
     mkdir -p "$AUTOSTART_DIR"

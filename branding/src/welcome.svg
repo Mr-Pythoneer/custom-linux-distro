@@ -13,7 +13,7 @@
 
   <rect width="1024" height="460" fill="url(#bg)"/>
 
-  <!-- crucible mark, left-aligned -->
+  <!-- refract mark, left-aligned -->
   <g transform="translate(60,60) scale(0.7)">
     <path d="M 156 230 L 200 380 Q 256 420 312 380 L 356 230 Z" fill="url(#glow2)"/>
     <path d="M 120 200 L 392 200 L 360 360 Q 360 392 312 404 L 200 404 Q 152 392 152 360 Z"
@@ -27,7 +27,7 @@
   </g>
 
   <!-- wordmark -->
-  <text x="430" y="240" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="72" font-weight="bold" fill="#ffffff">Crucible OS</text>
+  <text x="430" y="240" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="72" font-weight="bold" fill="#ffffff">Refract OS</text>
   <text x="430" y="290" font-family="DejaVu Sans, Helvetica, Arial, sans-serif" font-size="26" fill="#b5b5b5">Gaming · AI · Server · Creative · Normal</text>
 
   <!-- mode color chips -->

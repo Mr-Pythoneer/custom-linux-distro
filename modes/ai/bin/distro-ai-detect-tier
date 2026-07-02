@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Auto-detects the AI-model TIER for this machine and records it (plus the
-# laptop power PROFILE and the image-gen choice) into ~/.config/crucible-ai so
+# laptop power PROFILE and the image-gen choice) into ~/.config/refract-ai so
 # distro-ai-model / 02-preload-models.sh preload models that fit the hardware.
 #
 # What it detects (all cross-vendor, no root needed):
@@ -27,8 +27,8 @@
 # IMAGE (which ComfyUI image model to preload): you pick from what the tier
 #   supports, or none.
 #
-# Detection inputs are overridable by env (CRUCIBLE_VRAM_MIB, CRUCIBLE_GPU_LIST
-# ["mib:name;mib:name"], CRUCIBLE_IS_LAPTOP, CRUCIBLE_RAM_MB, CRUCIBLE_ALLOW_
+# Detection inputs are overridable by env (REFRACT_VRAM_MIB, REFRACT_GPU_LIST
+# ["mib:name;mib:name"], REFRACT_IS_LAPTOP, REFRACT_RAM_MB, REFRACT_ALLOW_
 # DATACENTER, NVIDIA_SMI, SYS_DRM_ROOT, SYS_DMI_CHASSIS, SYS_POWER_ROOT,
 # PROC_MEMINFO) so this is testable without the real hardware.
 #
@@ -42,7 +42,7 @@ set -euo pipefail
 
 SELF="${BASH_SOURCE[0]}"; [ -L "$SELF" ] && SELF="$(readlink "$SELF")"
 SCRIPT_DIR="$(cd "$(dirname "$SELF")" && pwd)"
-CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/crucible-ai"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/refract-ai"
 
 command -v python3 >/dev/null 2>&1 || { echo "python3 required (to read the catalogs)." >&2; exit 1; }
 
@@ -72,10 +72,10 @@ valid_profile() { case "$1" in efficiency|balance|power) return 0;; *) return 1;
 # ---- GPU enumeration (all inputs env-overridable) ----------------------------
 # gather_gpus -> prints "<mib>\t<name>" per detected GPU (Nvidia then AMD).
 gather_gpus() {
-    if [ -n "${CRUCIBLE_GPU_LIST:-}" ]; then
+    if [ -n "${REFRACT_GPU_LIST:-}" ]; then
         # test/override form: "mib:name;mib:name". Split on ';' then first ':'.
         local IFS=';' pair
-        for pair in $CRUCIBLE_GPU_LIST; do
+        for pair in $REFRACT_GPU_LIST; do
             [ -n "$pair" ] || continue
             printf '%s\t%s\n' "${pair%%:*}" "${pair#*:}"
         done
@@ -160,7 +160,7 @@ print("%d\t%d\t%d" % (pooled, single, count))
 }
 
 detect_is_laptop() {
-    if [ -n "${CRUCIBLE_IS_LAPTOP:-}" ]; then echo "$CRUCIBLE_IS_LAPTOP"; return; fi
+    if [ -n "${REFRACT_IS_LAPTOP:-}" ]; then echo "$REFRACT_IS_LAPTOP"; return; fi
     local chassis b
     chassis="$(cat "${SYS_DMI_CHASSIS:-/sys/class/dmi/id/chassis_type}" 2>/dev/null || echo 0)"
     case "$chassis" in
@@ -173,7 +173,7 @@ detect_is_laptop() {
 }
 
 detect_ram_mb() {
-    if [ -n "${CRUCIBLE_RAM_MB:-}" ]; then echo "$CRUCIBLE_RAM_MB"; return; fi
+    if [ -n "${REFRACT_RAM_MB:-}" ]; then echo "$REFRACT_RAM_MB"; return; fi
     local kb
     kb="$(awk '/^MemTotal:/{print $2}' "${PROC_MEMINFO:-/proc/meminfo}" 2>/dev/null || echo 0)"
     [[ "$kb" =~ ^[0-9]+$ ]] || kb=0
@@ -243,7 +243,7 @@ GPU_DESC="${_first_gpu#*$'\t'}"
 
 # Datacenter/headless silicon is Server-mode territory, not a desktop AI tier.
 # Skip the guard if the user forced a tier or explicitly allowed datacenter.
-if [ -z "${CRUCIBLE_ALLOW_DATACENTER:-}" ] && [ -z "$FORCE_TIER" ] && [ -n "$GPU_LINES" ]; then
+if [ -z "${REFRACT_ALLOW_DATACENTER:-}" ] && [ -z "$FORCE_TIER" ] && [ -n "$GPU_LINES" ]; then
     dc_hit=""; nvl_warn=""
     while IFS=$'\t' read -r _mib _name; do
         [ -n "${_name:-}" ] || continue
@@ -254,13 +254,13 @@ if [ -z "${CRUCIBLE_ALLOW_DATACENTER:-}" ] && [ -z "$FORCE_TIER" ] && [ -n "$GPU
     done <<< "$GPU_LINES"
     if [ -n "$dc_hit" ]; then
         cl 33 "Detected server-class hardware: $dc_hit"
-        echo "Crucible OS AI mode is a local-first DESKTOP experience (LM Studio GUI + ComfyUI)."
+        echo "Refract OS AI mode is a local-first DESKTOP experience (LM Studio GUI + ComfyUI)."
         echo "Datacenter GPUs belong in Server mode's headless serving path (lms CLI / vLLM),"
         echo "not a desktop AI tier — a desktop chat GUI is the wrong shape for this hardware."
         echo ""
         echo "  -> Use Server mode:   distro-modectl switch server"
         echo "  -> Force a desktop tier anyway:  distro-ai-detect-tier --tier ultra"
-        echo "     (or export CRUCIBLE_ALLOW_DATACENTER=1)"
+        echo "     (or export REFRACT_ALLOW_DATACENTER=1)"
         exit 3
     fi
     if [ -n "$nvl_warn" ]; then
@@ -275,9 +275,9 @@ if [ -n "$GPU_LINES" ]; then
     IFS=$'\t' read -r POOLED SINGLE GPU_COUNT <<< "$(printf '%s\n' "$GPU_LINES" | compute_vram)"
 fi
 # Explicit override forces the VRAM figure used for tiering.
-if [ -n "${CRUCIBLE_VRAM_MIB:-}" ]; then
-    [[ "$CRUCIBLE_VRAM_MIB" =~ ^[0-9]+$ ]] || { echo "CRUCIBLE_VRAM_MIB must be an integer (MiB), got '$CRUCIBLE_VRAM_MIB'." >&2; exit 1; }
-    POOLED="$CRUCIBLE_VRAM_MIB"; SINGLE="$CRUCIBLE_VRAM_MIB"; GPU_COUNT=1
+if [ -n "${REFRACT_VRAM_MIB:-}" ]; then
+    [[ "$REFRACT_VRAM_MIB" =~ ^[0-9]+$ ]] || { echo "REFRACT_VRAM_MIB must be an integer (MiB), got '$REFRACT_VRAM_MIB'." >&2; exit 1; }
+    POOLED="$REFRACT_VRAM_MIB"; SINGLE="$REFRACT_VRAM_MIB"; GPU_COUNT=1
 fi
 VRAM_MIB="$POOLED"
 IS_LAPTOP="$(detect_is_laptop)"
@@ -300,7 +300,7 @@ valid_profile "$PROFILE" || { echo "Invalid --profile '$PROFILE' (efficiency bal
 IMAGE="${FORCE_IMAGE:-$(default_image_token "$TIER")}"
 
 # ---- report ------------------------------------------------------------------
-cl 36 '== Crucible AI hardware detection =='
+cl 36 '== Refract AI hardware detection =='
 printf '  %-14s %s\n' "GPU:"    "$GPU_DESC"
 if [ "${GPU_COUNT:-0}" -gt 1 ]; then
     printf '  %-14s %s GiB pooled across %s x %s (%s MiB); largest single %s MiB\n' \

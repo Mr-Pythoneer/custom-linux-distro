@@ -1,4 +1,4 @@
-# Crucible OS — Architecture Plan
+# Refract OS — Architecture Plan
 
 ## Goal (restated, with realistic framing)
 
@@ -136,15 +136,15 @@ Key verified facts that shaped the build (researched, not guessed):
 The original rationale for a local-first coding stack (below) still applies; it
 just runs on LM Studio's engine now instead of a hand-built llama.cpp service.
 
-Currently Crucible12 is Windows-11/PowerShell-native (`01-install-llamacpp.ps1`, `02-download-models.ps1`, `run-crucible.ps1`, etc., targeting CUDA + `nvidia-smi`). Porting work for AI mode:
+Currently Crucible12 is Windows-11/PowerShell-native (`01-install-llamacpp.ps1`, `02-download-models.ps1`, `run-refract.ps1`, etc., targeting CUDA + `nvidia-smi`). Porting work for AI mode:
 
 - **Linux port of the setup scripts**: bash equivalents of the four `setup/*.ps1` scripts — `llama.cpp` has Linux CUDA build targets already (this is the easy part), model download/quant logic is OS-agnostic, `benchmark.ps1`'s GPU-utilization check becomes `nvidia-smi`-on-Linux (same tool, already works)
-- **systemd-ified `llama-server`**: instead of "leave a PowerShell window open running `run-crucible.ps1`," AI mode starts/stops `llama-server` as a systemd unit (`crucible12-server.service`) with the preset baked into the unit's `ExecStart` flags — no terminal window babysitting
-- **Preset switching = the mode's actual control surface**: `crucible` / `max` / `fast` / `reasoning` already map cleanly onto something like `distro-ai-preset switch max` — restart the systemd unit with different flags, swap the matching `opencode.*.json`. This reuses your existing preset design verbatim rather than inventing a new one.
+- **systemd-ified `llama-server`**: instead of "leave a PowerShell window open running `run-refract.ps1`," AI mode starts/stops `llama-server` as a systemd unit (`crucible12-server.service`) with the preset baked into the unit's `ExecStart` flags — no terminal window babysitting
+- **Preset switching = the mode's actual control surface**: `refract` / `max` / `fast` / `reasoning` already map cleanly onto something like `distro-ai-preset switch max` — restart the systemd unit with different flags, swap the matching `opencode.*.json`. This reuses your existing preset design verbatim rather than inventing a new one.
 - **OpenCode as the AI-mode default app**: pinned/auto-launched in AI mode's app bundle, already pointed at `localhost`'s `llama-server`
 - **Mode-level resource ownership**: AI mode is what reserves GPU/VRAM and RAM-bandwidth headroom for `llama-server` (per §4's table) — this is literally what `--n-cpu-moe` tuning already assumes (DDR5 EXPO on, ~30GB VRAM headroom target), so the mode-switcher's job is just "make sure nothing else is competing for that headroom while AI mode is active," not new tuning logic
 - **System-level hooks beyond the terminal**: a global hotkey assistant overlay and file-manager context-menu action ("ask local AI about this file") both just become OpenAI-compatible HTTP calls to the already-running `llama-server` — thin clients on top of infrastructure Crucible12 already provides
-- **Known limitation to carry over, not silently fix**: the `reasoning` preset (gpt-oss-120b)'s flaky tool-calling via Harmony format ([OpenCode #7185](https://github.com/anomalyco/opencode/issues/7185)) is upstream, not yours to fix — AI mode should default to `crucible`/`max` and treat `reasoning` as a manual one-shot fallback, matching what the README already recommends
+- **Known limitation to carry over, not silently fix**: the `reasoning` preset (gpt-oss-120b)'s flaky tool-calling via Harmony format ([OpenCode #7185](https://github.com/anomalyco/opencode/issues/7185)) is upstream, not yours to fix — AI mode should default to `refract`/`max` and treat `reasoning` as a manual one-shot fallback, matching what the README already recommends
 
 Optional, explicit opt-in only: a toggle to also route through Claude (cloud) when the user wants a stronger model and has connectivity — same principle as OpenClaw's gateway, but secondary to the local-first default, never silently substituted in.
 
@@ -202,7 +202,7 @@ Linux project's out-of-tree kernel work rather than anything live-build
 provides — adopting someone else's multi-year reverse-engineering effort,
 not a package list. Deliberately deferred, not silently dropped.
 
-**Tier 3 — not actually a fit for what Crucible OS is at all:**
+**Tier 3 — not actually a fit for what Refract OS is at all:**
 microcontroller-class embedded Linux (Buildroot/Yocto territory — no
 desktop, often no apt, no installer). A fundamentally different kind of
 project than a desktop/server distro with a Calamares installer.
@@ -230,7 +230,7 @@ project than a desktop/server distro with a Calamares installer.
 
 ## Open questions — resolved or defaulted (see TODO.md §11 for the full writeup)
 
-- ~~Distro name~~ — resolved: Crucible OS.
+- ~~Distro name~~ — resolved: Refract OS.
 - ~~AI gateway Claude-only vs. local-first?~~ — resolved: local-first
   (Crucible12), Claude-cloud is an explicit opt-in toggle only, never
   silently substituted in.

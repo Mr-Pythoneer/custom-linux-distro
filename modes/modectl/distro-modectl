@@ -152,7 +152,7 @@ apply_ai_model() {
         # non-zero to route server-class GPUs to Server mode — that must not
         # break the mode switch).
         if command -v distro-ai-detect-tier >/dev/null 2>&1 \
-           && [ ! -f "${XDG_CONFIG_HOME:-$HOME/.config}/crucible-ai/tier" ]; then
+           && [ ! -f "${XDG_CONFIG_HOME:-$HOME/.config}/refract-ai/tier" ]; then
             distro-ai-detect-tier --yes >/dev/null 2>&1 \
                 || echo "Note: AI hardware-tier auto-detect didn't complete (server-class GPU? run distro-ai-detect-tier). Using defaults." >&2
         fi

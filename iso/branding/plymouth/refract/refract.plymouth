@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=Refract OS
+Description=Refract OS boot splash — molten refract on dark
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/refract
+ScriptFile=/usr/share/plymouth/themes/refract/refract.script

@@ -7,7 +7,7 @@
 # non-commercial license on HF + a token) — only with --flux-dev + HF_TOKEN.
 #
 # --from-config reads the image choice recorded by distro-ai-detect-tier
-# (~/.config/crucible-ai/image: none|sdxl|flux-schnell|flux-dev) and downloads
+# (~/.config/refract-ai/image: none|sdxl|flux-schnell|flux-dev) and downloads
 # only that, so the setup wizard fetches exactly what the user picked.
 #
 # Uses the huggingface-cli (hf) downloader. Run as the desktop user.
@@ -39,7 +39,7 @@ done
 COMFY_DIR="${COMFY_DIR:-$HOME/ComfyUI}"
 
 if [ "$FROM_CONFIG" = true ]; then
-    CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/crucible-ai"
+    CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/refract-ai"
     choice="$(cat "$CONFIG_HOME/image" 2>/dev/null || echo none)"
     case "$choice" in
         none)         WANT_SDXL=false; WANT_SCHNELL=false; WANT_DEV=false ;;

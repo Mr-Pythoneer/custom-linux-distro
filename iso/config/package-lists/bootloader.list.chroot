@@ -1,5 +1,5 @@
 # BIOS bootloader bits that must PERSIST in the chroot so the
-# config/hooks/500-crucible-bootfix.binary hook can copy isolinux.bin and
+# config/hooks/500-refract-bootfix.binary hook can copy isolinux.bin and
 # ldlinux.c32 into binary/isolinux before ISO mastering. (The old live-build
 # fork's own Check_package would install-then-REMOVE syslinux packages within
 # the binary_syslinux stage; packages listed here are detected as already

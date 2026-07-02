@@ -1,0 +1,9 @@
+# Build + runtime deps for the macOS look (0300-macos-look.chroot installs
+# WhiteSur, which compiles SCSS at build time; user-theme extension applies the
+# GNOME Shell theme at runtime).
+git
+sassc
+libglib2.0-dev-bin
+libxml2-utils
+gnome-shell-extensions
+gnome-themes-extra

@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Crucible OS — one Linux install, five modes</title>
+<title>Refract OS — one Linux install, five modes</title>
 <meta name="description" content="An Ubuntu-based Linux distro that switches its whole personality on command — Gaming, AI, Server, Creative, or a polished Normal mode — built around local-first AI.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.35.0/tabler-icons.min.css">
@@ -160,14 +160,14 @@
 
 <nav>
   <div class="wrap">
-    <div class="brand"><img src="logo.png" alt="Crucible OS logo">Crucible OS</div>
+    <div class="brand"><img src="logo.png" alt="Refract OS logo">Refract OS</div>
     <div class="navlinks">
       <a href="#modes">Modes</a>
       <a href="#download">Download</a>
       <a href="#strains">Strains</a>
       <a href="#promises">Promises</a>
       <a href="#status">Status</a>
-      <a href="https://github.com/Mr-Pythoneer/crucible-os">GitHub</a>
+      <a href="https://github.com/Mr-Pythoneer/refract-os">GitHub</a>
     </div>
   </div>
 </nav>
@@ -179,8 +179,8 @@
     <p class="tagline">An Ubuntu-based distro that switches its whole personality on command — Gaming, AI, Server, Creative, or a polished Normal mode — built around local-first AI, not a cloud assistant bolted onto a browser.</p>
     <div class="cta">
       <a class="btn btn-primary" href="#download">Download</a>
-      <a class="btn btn-secondary" href="https://github.com/Mr-Pythoneer/crucible-os">View the repo</a>
-      <a class="btn btn-secondary" href="https://github.com/Mr-Pythoneer/crucible-os/blob/main/TODO.md">Build checklist</a>
+      <a class="btn btn-secondary" href="https://github.com/Mr-Pythoneer/refract-os">View the repo</a>
+      <a class="btn btn-secondary" href="https://github.com/Mr-Pythoneer/refract-os/blob/main/TODO.md">Build checklist</a>
     </div>
     <div class="terminal">
       <div class="bar">
@@ -245,7 +245,7 @@
     </div>
     <div class="dl-row">
       <a class="btn btn-primary" href="install.html">Download &amp; install guide</a>
-      <a class="btn btn-secondary" href="https://github.com/Mr-Pythoneer/crucible-os/releases">Watch for releases</a>
+      <a class="btn btn-secondary" href="https://github.com/Mr-Pythoneer/refract-os/releases">Watch for releases</a>
     </div>
     <p class="dl-fine">The build is one image; the hardware picker only tailors which local models preload — the OS itself is identical across machines.</p>
   </div>
@@ -297,7 +297,7 @@
     <h2>Status</h2>
     <div class="status-box">
       <p style="margin:0 0 12px;">Said plainly, not buried: <strong>the first ISO built AND booted to a full GNOME desktop on 2026-07-02</strong> — built in CI (workstation strain, 2.45&nbsp;GB, six decade-old live-build bugs fixed), then boot-verified the same day in QEMU/KVM on a CI runner: SeaBIOS &rarr; isolinux &rarr; kernel &rarr; live desktop, with casper/systemd assertions on a serial console and screenshots as artifacts. Still true: <strong>no real hardware yet</strong>, and the Calamares installer has never run. The full framework — driver scripts, all 5 mode bundles, 6 hardware strains, the build pipeline, CI — exists and is execution-tested where possible. Known limitation: the ISO is BIOS/CSM-boot only for now (Ubuntu's live-build fork has no EFI support).</p>
-      <p style="margin:0; color: var(--text-dim);">The <a href="https://github.com/Mr-Pythoneer/crucible-os/blob/main/TODO.md">TODO.md</a> in the repo is the live, itemized source of truth — check there before believing anything here is further along than it is.</p>
+      <p style="margin:0; color: var(--text-dim);">The <a href="https://github.com/Mr-Pythoneer/refract-os/blob/main/TODO.md">TODO.md</a> in the repo is the live, itemized source of truth — check there before believing anything here is further along than it is.</p>
     </div>
   </div>
 </section>
@@ -306,9 +306,9 @@
   <div class="wrap">
     Built on Ubuntu 24.04 LTS · live-build · Calamares · <a href="https://lmstudio.ai">LM Studio</a> + <a href="https://github.com/comfyanonymous/ComfyUI">ComfyUI</a> for local AI
     <div class="links">
-      <a href="https://github.com/Mr-Pythoneer/crucible-os">github.com/Mr-Pythoneer/crucible-os</a>
-      <a href="https://github.com/Mr-Pythoneer/crucible-os/blob/main/TODO.md">TODO.md</a>
-      <a href="https://github.com/Mr-Pythoneer/crucible-os/blob/main/DESIGN.md">DESIGN.md</a>
+      <a href="https://github.com/Mr-Pythoneer/refract-os">github.com/Mr-Pythoneer/refract-os</a>
+      <a href="https://github.com/Mr-Pythoneer/refract-os/blob/main/TODO.md">TODO.md</a>
+      <a href="https://github.com/Mr-Pythoneer/refract-os/blob/main/DESIGN.md">DESIGN.md</a>
     </div>
   </div>
 </footer>
@@ -403,7 +403,7 @@
       res.className = 'cfg-result cfg-server';
       res.innerHTML =
         '<div class="tier-head"><span class="tier-badge" style="border-color:var(--warn);color:var(--warn)">Server mode</span><span class="vram">' + esc(o.vram) + 'GB — datacenter GPU</span></div>' +
-        '<p style="margin:12px 0 0;color:var(--text-dim);font-size:0.92rem">Datacenter cards (H100 / H200 / B200 / MI300X…) are headless server silicon. Crucible OS routes them to <strong>Server mode</strong> — a headless serving path (lms&nbsp;CLI / vLLM) — not the desktop LM&nbsp;Studio GUI. A desktop chat UI is the wrong shape for a rack card.</p>' +
+        '<p style="margin:12px 0 0;color:var(--text-dim);font-size:0.92rem">Datacenter cards (H100 / H200 / B200 / MI300X…) are headless server silicon. Refract OS routes them to <strong>Server mode</strong> — a headless serving path (lms&nbsp;CLI / vLLM) — not the desktop LM&nbsp;Studio GUI. A desktop chat UI is the wrong shape for a rack card.</p>' +
         '<div class="cfg-cmd"><span class="prompt">$</span> distro-modectl switch server</div>';
       return;
     }

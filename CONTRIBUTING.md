@@ -1,6 +1,6 @@
-# Contributing to Crucible OS
+# Contributing to Refract OS
 
-Crucible OS is structured so others can contribute, even though it started
+Refract OS is structured so others can contribute, even though it started
 solo. This file codifies the working norms the codebase already follows — the
 short version is: **verify, don't fabricate, and say what's unverified.**
 

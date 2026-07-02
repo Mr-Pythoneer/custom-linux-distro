@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # Forces an initramfs rebuild so the casper-bottom hook
-# (config/includes.chroot/usr/share/initramfs-tools/scripts/casper-bottom/25-crucible-install-icon)
+# (config/includes.chroot/usr/share/initramfs-tools/scripts/casper-bottom/25-refract-install-icon)
 # actually gets embedded into the live initrd. Casper-bottom scripts shipped
 # by real .deb packages get this for free via dpkg triggers when their
 # package installs/updates -- our script is a plain file dropped in via

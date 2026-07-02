@@ -7,7 +7,7 @@
 AIM="$REPO_ROOT/modes/ai/bin/distro-ai-model"
 # Tiered now: the former models.catalog.json is the 'max' tier. Pin the tier so
 # resolution is deterministic regardless of any ~/.config on the host.
-export CRUCIBLE_AI_TIER=max
+export REFRACT_AI_TIER=max
 CATALOG="$REPO_ROOT/modes/ai/config/models.catalog.max.json"
 
 if ! command -v python3 >/dev/null 2>&1; then note "skipping (need python3)"; finish; exit $?; fi
@@ -45,7 +45,7 @@ case "$1" in
   *)    echo "STUB-LMS: $*"; exit 0 ;;
 esac'
 # XDG_CONFIG_HOME="$work" too, so a host XDG_CONFIG_HOME can't leak the real
-# ~/.config/crucible-ai tier/profile/vram_mib into these hermetic runs.
+# ~/.config/refract-ai tier/profile/vram_mib into these hermetic runs.
 run_aim() { HOME="$work" XDG_CONFIG_HOME="$work" PATH="$work:$PATH" "$AIM" "$@"; }
 
 # list works without lms (reads catalog only)
@@ -83,9 +83,9 @@ run_aim load flux1-dev >/dev/null 2>&1; assert_eq "load image model via lms is r
 
 # --- ultra tier: VRAM-fit aware resolution + min_vram_gb warning ---
 # run at ultra tier, power profile, with an injected effective VRAM.
-run_ultra() { HOME="$work" XDG_CONFIG_HOME="$work" PATH="$work:$PATH" CRUCIBLE_AI_TIER=ultra CRUCIBLE_AI_PROFILE=power CRUCIBLE_VRAM_MIB="$1" "$AIM" "${@:2}"; }
+run_ultra() { HOME="$work" XDG_CONFIG_HOME="$work" PATH="$work:$PATH" REFRACT_AI_TIER=ultra REFRACT_AI_PROFILE=power REFRACT_VRAM_MIB="$1" "$AIM" "${@:2}"; }
 # same, but lets the caller pick the profile (for efficiency/balance fallback tests)
-run_ultra_prof() { HOME="$work" XDG_CONFIG_HOME="$work" PATH="$work:$PATH" CRUCIBLE_AI_TIER=ultra CRUCIBLE_AI_PROFILE="$1" CRUCIBLE_VRAM_MIB="$2" "$AIM" "${@:3}"; }
+run_ultra_prof() { HOME="$work" XDG_CONFIG_HOME="$work" PATH="$work:$PATH" REFRACT_AI_TIER=ultra REFRACT_AI_PROFILE="$1" REFRACT_VRAM_MIB="$2" "$AIM" "${@:3}"; }
 
 # 48GB: 70B (Q4, 42.5GB) fits FULLY -> loaded, no fit-warning (the ultra win over max's offload)
 out="$(run_ultra 49140 use know-it-all 2>&1)"

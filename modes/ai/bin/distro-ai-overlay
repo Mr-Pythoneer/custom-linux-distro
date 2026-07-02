@@ -29,18 +29,18 @@ if ! command -v zenity >/dev/null 2>&1; then
 fi
 
 prompt="$(zenity --entry \
-    --title="Crucible OS — Ask AI" \
+    --title="Refract OS — Ask AI" \
     --text="Ask the local AI:" \
     --width=480 2>/dev/null)" || exit 0   # user hit Cancel -- not an error
 
 [ -n "$prompt" ] || exit 0
 
 if ! reply="$("$SCRIPT_DIR/distro-ai-ask" "$prompt" 2>&1)"; then
-    zenity --error --title="Crucible OS — Ask AI" --text="$reply" --width=480 2>/dev/null
+    zenity --error --title="Refract OS — Ask AI" --text="$reply" --width=480 2>/dev/null
     exit 1
 fi
 
 zenity --text-info \
-    --title="Crucible OS — Ask AI" \
+    --title="Refract OS — Ask AI" \
     --width=600 --height=400 \
     --filename=<(printf '%s' "$reply") 2>/dev/null

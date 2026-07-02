@@ -24,7 +24,7 @@ fi
 SELF="${BASH_SOURCE[0]}"; [ -L "$SELF" ] && SELF="$(readlink "$SELF")"
 SCRIPT_DIR="$(cd "$(dirname "$SELF")" && pwd)"
 SETUP_DIR="$(cd "$SCRIPT_DIR/../setup" && pwd)"
-CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/crucible-ai"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/refract-ai"
 
 DETECT="$SCRIPT_DIR/distro-ai-detect-tier"
 [ -x "$DETECT" ] || DETECT="$(command -v distro-ai-detect-tier 2>/dev/null || echo "$DETECT")"
@@ -52,7 +52,7 @@ rc=$?
 set -e
 if [ "$rc" -eq 3 ]; then
     echo ""
-    c 33 "Server-class GPU detected — this is Crucible Server mode, not desktop AI mode (see above)."
+    c 33 "Server-class GPU detected — this is Refract Server mode, not desktop AI mode (see above)."
     exit 3
 fi
 [ "$rc" -eq 0 ] || { echo "distro-ai-detect-tier failed (exit $rc)." >&2; exit "$rc"; }

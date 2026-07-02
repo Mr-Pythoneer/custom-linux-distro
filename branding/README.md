@@ -1,7 +1,7 @@
 # Brand assets
 
-Real, version-controlled SVG sources for Crucible OS's logo and Calamares
-welcome banner — a crucible-vessel motif (molten glow, twin handles, rising
+Real, version-controlled SVG sources for Refract OS's logo and Calamares
+welcome banner — a refract-vessel motif (molten glow, twin handles, rising
 sparks) on a dark badge, matching the website's dark palette.
 
 - `src/logo.svg` — circular badge, used as both Calamares' `productLogo`
@@ -16,7 +16,7 @@ sparks) on a dark badge, matching the website's dark palette.
 ```
 
 Rasterizes both SVGs to PNG and copies them into
-`iso/calamares/branding/crucibleos/` (the paths `branding.desc` expects),
+`iso/calamares/branding/refractos/` (the paths `branding.desc` expects),
 plus a square `favicon.png` for the website (`docs/favicon.png`,
 `docs/logo.png` — copied in manually, not by this script, since wiring them
 into `docs/index.html` is a website-content decision).

@@ -1,4 +1,4 @@
-# Crucible OS — LM Studio OpenAI-compatible server on port 8080.
+# Refract OS — LM Studio OpenAI-compatible server on port 8080.
 #
 # This is a USER service (LM Studio is per-user in ~/.lmstudio). Install:
 #   mkdir -p ~/.config/systemd/user
@@ -13,7 +13,7 @@
 # the llmster daemon and returns, so Type=oneshot + RemainAfterExit is correct.
 
 [Unit]
-Description=Crucible OS — LM Studio OpenAI server (port 8080)
+Description=Refract OS — LM Studio OpenAI server (port 8080)
 After=default.target
 
 [Service]

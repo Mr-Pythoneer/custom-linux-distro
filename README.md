@@ -1,6 +1,6 @@
-# Crucible OS
+# Refract OS
 
-**[Landing page →](https://mr-pythoneer.github.io/crucible-os/)**
+**[Landing page →](https://mr-pythoneer.github.io/refract-os/)**
 
 An Ubuntu-based Linux distro that switches its whole personality on command — Gaming, AI, Server, Creative, or a polished macOS-style Normal mode — built around local-first AI (via [Crucible12](https://github.com/Mr-Pythoneer/Crucible12)), not a cloud assistant bolted onto a browser.
 

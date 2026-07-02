@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Crucible OS — download &amp; install guide</title>
-<meta name="description" content="How to build the Crucible OS ISO from source, write it to a USB, install it, and set up local AI sized to your GPU.">
+<title>Refract OS — download &amp; install guide</title>
+<meta name="description" content="How to build the Refract OS ISO from source, write it to a USB, install it, and set up local AI sized to your GPU.">
 <link rel="icon" type="image/png" href="favicon.png">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tabler-icons/3.35.0/tabler-icons.min.css">
 <style>
@@ -78,11 +78,11 @@
 
 <nav>
   <div class="wrap">
-    <div class="brand"><img src="logo.png" alt="Crucible OS logo">Crucible OS</div>
+    <div class="brand"><img src="logo.png" alt="Refract OS logo">Refract OS</div>
     <div class="navlinks">
       <a href="index.html">Home</a>
       <a href="index.html#download">Configure</a>
-      <a href="https://github.com/Mr-Pythoneer/crucible-os">GitHub</a>
+      <a href="https://github.com/Mr-Pythoneer/refract-os">GitHub</a>
     </div>
   </div>
 </nav>
@@ -91,10 +91,10 @@
   <div class="wrap">
     <a class="back" href="index.html"><i class="ti ti-arrow-left" aria-hidden="true"></i>Back to home</a>
     <h1>Download &amp; install guide</h1>
-    <p class="tagline">Zero to a working Crucible OS install with local AI sized to your GPU. It's one image, built from source — here's the whole path.</p>
+    <p class="tagline">Zero to a working Refract OS install with local AI sized to your GPU. It's one image, built from source — here's the whole path.</p>
     <div class="callout">
       <i class="ti ti-alert-triangle" aria-hidden="true"></i>
-      <div class="t"><strong>Fresh milestone, honest caveats.</strong> The first ISO <strong>built successfully in CI on 2026-07-02</strong> (workstation strain, 2.45&nbsp;GB) — recent build artifacts are downloadable for 7 days from the <a href="https://github.com/Mr-Pythoneer/crucible-os/actions/workflows/build-iso.yml">build-iso workflow runs</a> (GitHub login required). It <strong>boots to a full GNOME desktop in QEMU</strong> (CI-verified same day, screenshots in the boot-smoke artifacts) — but it has never touched real hardware and the installer has never run, so building it yourself per below is still the honest framing. It's also BIOS/CSM-boot only for now. Cross-check <a href="https://github.com/Mr-Pythoneer/crucible-os/blob/main/TODO.md">TODO.md</a>; real releases will appear on <a href="https://github.com/Mr-Pythoneer/crucible-os/releases">the releases page</a>.</div>
+      <div class="t"><strong>Fresh milestone, honest caveats.</strong> The first ISO <strong>built successfully in CI on 2026-07-02</strong> (workstation strain, 2.45&nbsp;GB) — recent build artifacts are downloadable for 7 days from the <a href="https://github.com/Mr-Pythoneer/refract-os/actions/workflows/build-iso.yml">build-iso workflow runs</a> (GitHub login required). It <strong>boots to a full GNOME desktop in QEMU</strong> (CI-verified same day, screenshots in the boot-smoke artifacts) — but it has never touched real hardware and the installer has never run, so building it yourself per below is still the honest framing. It's also BIOS/CSM-boot only for now. Cross-check <a href="https://github.com/Mr-Pythoneer/refract-os/blob/main/TODO.md">TODO.md</a>; real releases will appear on <a href="https://github.com/Mr-Pythoneer/refract-os/releases">the releases page</a>.</div>
     </div>
   </div>
 </header>
@@ -118,8 +118,8 @@
       <div class="body">
         <h3>Get the source &amp; run pre-flight</h3>
         <p>On the Linux build host, clone the repo, install live-build, and run the read-only pre-flight check so the build doesn't fail an hour in on something checkable in seconds.</p>
-        <pre class="code"><span class="p">$</span> git clone https://github.com/Mr-Pythoneer/crucible-os
-<span class="p">$</span> cd crucible-os
+        <pre class="code"><span class="p">$</span> git clone https://github.com/Mr-Pythoneer/refract-os
+<span class="p">$</span> cd refract-os
 <span class="p">$</span> sudo apt-get install live-build
 <span class="p">$</span> ./preflight.sh            <span class="c"># build-host readiness (safe to re-run)</span></pre>
       </div>
@@ -129,10 +129,10 @@
       <div class="num">2</div>
       <div class="body">
         <h3>Build the ISO</h3>
-        <p>Pick the hardware <strong>strain</strong> — it only sets the default desktop + base packages; every strain still gets all five modes. Output is <code>crucible-os-&lt;strain&gt;.iso</code>.</p>
+        <p>Pick the hardware <strong>strain</strong> — it only sets the default desktop + base packages; every strain still gets all five modes. Output is <code>refract-os-&lt;strain&gt;.iso</code>.</p>
         <pre class="code"><span class="p">$</span> cd iso
 <span class="p">$</span> ./build.sh workstation   <span class="c"># or: laptop | lowspec | server | handheld | cloud</span>
-  <span class="c"># … long build … → crucible-os-workstation.iso</span></pre>
+  <span class="c"># … long build … → refract-os-workstation.iso</span></pre>
         <p>Run this on the build host, not a thin laptop — it needs the disk and time.</p>
       </div>
     </div>
@@ -142,7 +142,7 @@
       <div class="body">
         <h3>Write it to a USB stick</h3>
         <p>This <span class="warn-inline">erases the stick</span>. On Linux/macOS, find the device with <code>lsblk</code> (Linux) or <code>diskutil list</code> (macOS), then:</p>
-        <pre class="code"><span class="p">$</span> sudo dd if=crucible-os-workstation.iso of=/dev/sdX bs=4M status=progress oflag=sync</pre>
+        <pre class="code"><span class="p">$</span> sudo dd if=refract-os-workstation.iso of=/dev/sdX bs=4M status=progress oflag=sync</pre>
         <p><span class="warn-inline">⚠ Replace <code>/dev/sdX</code> with your actual USB device</span> — the wrong device will overwrite the wrong disk. Prefer a GUI if unsure:</p>
         <ul>
           <li>Any OS: <a href="https://etcher.balena.io/">balenaEtcher</a> (point-and-click, hard to get wrong).</li>
@@ -172,7 +172,7 @@
       <div class="num">6</div>
       <div class="body">
         <h3>First login — pick your mode</h3>
-        <p>Crucible OS is one install that switches personality on command. Set the mode for what you're doing:</p>
+        <p>Refract OS is one install that switches personality on command. Set the mode for what you're doing:</p>
         <pre class="code"><span class="p">$</span> distro-modectl switch gaming    <span class="c"># or: ai | server | creative | normal</span></pre>
       </div>
     </div>
@@ -202,8 +202,8 @@
 
     <div class="endcta">
       <a class="btn btn-primary" href="index.html#download">Configure your build</a>
-      <a class="btn btn-secondary" href="https://github.com/Mr-Pythoneer/crucible-os">View the repo</a>
-      <a class="btn btn-secondary" href="https://github.com/Mr-Pythoneer/crucible-os/blob/main/TODO.md">Build checklist</a>
+      <a class="btn btn-secondary" href="https://github.com/Mr-Pythoneer/refract-os">View the repo</a>
+      <a class="btn btn-secondary" href="https://github.com/Mr-Pythoneer/refract-os/blob/main/TODO.md">Build checklist</a>
     </div>
   </div>
 </section>

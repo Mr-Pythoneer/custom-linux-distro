@@ -60,7 +60,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: crucible-os-${{ inputs.strain }}
+          name: refract-os-${{ inputs.strain }}
           # Glob, not a fixed filename: if build.sh's rename step doesn't
           # run (build failed before producing output), this still uploads
           # whatever live-build did produce for debugging instead of the

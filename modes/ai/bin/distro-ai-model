@@ -24,16 +24,16 @@ set -euo pipefail
 # symlinks) so paths relative to the real script dir resolve correctly.
 SELF="${BASH_SOURCE[0]}"; [ -L "$SELF" ] && SELF="$(readlink "$SELF")"
 SCRIPT_DIR="$(cd "$(dirname "$SELF")" && pwd)"
-CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/crucible-ai"
+CONFIG_HOME="${XDG_CONFIG_HOME:-$HOME/.config}/refract-ai"
 # Active AI-model tier (cpu/entry/mid/high/max/ultra) and laptop power profile
 # (efficiency/balance/power). distro-ai-detect-tier writes these into
 # $CONFIG_HOME; override via env. Default tier=max (the 5090 build), balance.
-TIER="${CRUCIBLE_AI_TIER:-$(cat "$CONFIG_HOME/tier" 2>/dev/null || echo max)}"
-PROFILE="${CRUCIBLE_AI_PROFILE:-$(cat "$CONFIG_HOME/profile" 2>/dev/null || echo balance)}"
+TIER="${REFRACT_AI_TIER:-$(cat "$CONFIG_HOME/tier" 2>/dev/null || echo max)}"
+PROFILE="${REFRACT_AI_PROFILE:-$(cat "$CONFIG_HOME/profile" 2>/dev/null || echo balance)}"
 # Effective (pooled) VRAM in MiB, written by distro-ai-detect-tier. Used to gate
 # models whose min_vram_gb exceeds what this box has (mainly the ultra tier's
 # 96GB-class entries). 0/empty = unknown -> no gating (back-compat).
-VRAM_MIB="${CRUCIBLE_VRAM_MIB:-$(cat "$CONFIG_HOME/vram_mib" 2>/dev/null || echo 0)}"
+VRAM_MIB="${REFRACT_VRAM_MIB:-$(cat "$CONFIG_HOME/vram_mib" 2>/dev/null || echo 0)}"
 [[ "$VRAM_MIB" =~ ^[0-9]+$ ]] || VRAM_MIB=0
 CATALOG="$SCRIPT_DIR/../config/models.catalog.$TIER.json"
 [ -f "$CATALOG" ] || CATALOG="$SCRIPT_DIR/../config/models.catalog.max.json"
@@ -139,7 +139,7 @@ load_model() {  # <catalog-id>
 case "${1:-}" in
     list)
         echo "Active tier: $TIER   profile: $PROFILE$([ "$VRAM_MIB" -gt 0 ] && echo "   VRAM: ~$(( VRAM_MIB / 1024 ))GB")   (catalog: $(basename "$CATALOG"))"
-        echo "Tiers: cpu entry mid high max ultra  ·  set via distro-ai-detect-tier or \$CRUCIBLE_AI_TIER"
+        echo "Tiers: cpu entry mid high max ultra  ·  set via distro-ai-detect-tier or \$REFRACT_AI_TIER"
         echo ""
         catalog_py '
 import json, os

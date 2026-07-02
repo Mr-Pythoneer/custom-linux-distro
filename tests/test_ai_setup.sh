@@ -11,11 +11,11 @@ SETUP_SRC="$REPO_ROOT/modes/ai/bin/distro-ai-setup"
 make_env() {
   local rc="$1" image="${2:-flux-dev}" root
   root="$(new_stubdir)"
-  mkdir -p "$root/ai/bin" "$root/ai/setup" "$root/cfg/crucible-ai"
+  mkdir -p "$root/ai/bin" "$root/ai/setup" "$root/cfg/refract-ai"
   cp "$SETUP_SRC" "$root/ai/bin/distro-ai-setup"; chmod +x "$root/ai/bin/distro-ai-setup"
   { printf '#!/usr/bin/env bash\n'
-    printf 'printf "ultra\\n" > "$XDG_CONFIG_HOME/crucible-ai/tier"\n'
-    printf 'printf "%s\\n" > "$XDG_CONFIG_HOME/crucible-ai/image"\n' "$image"
+    printf 'printf "ultra\\n" > "$XDG_CONFIG_HOME/refract-ai/tier"\n'
+    printf 'printf "%s\\n" > "$XDG_CONFIG_HOME/refract-ai/image"\n' "$image"
     printf 'echo "[detect stub]"; exit %s\n' "$rc"
   } > "$root/ai/bin/distro-ai-detect-tier"; chmod +x "$root/ai/bin/distro-ai-detect-tier"
   local s

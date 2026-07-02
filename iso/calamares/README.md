@@ -18,11 +18,11 @@ run" instead of "needs a GPU."
 
 ## What's missing, not faked
 
-`branding/crucibleos/branding.desc` references `logo.png`, `welcome.png`,
+`branding/refractos/branding.desc` references `logo.png`, `welcome.png`,
 and `show.qml` — **all three now exist.**
 
 - `logo.png`/`welcome.png` — built from real SVG source (`branding/src/`,
-  crucible-vessel motif) via `branding/build.sh`; see `branding/README.md`.
+  refract-vessel motif) via `branding/build.sh`; see `branding/README.md`.
 - `show.qml` — 6 slides (intro + one per mode), written against Calamares'
   own default slideshow source (`calamares/calamares`
   `src/branding/default/show.qml`) and its `src/branding/README.md`, fetched
@@ -41,10 +41,10 @@ Wired into `iso/build.sh`: for GUI strains (not `server`/`cloud`, which are
 headless and use cloud-init/preseed instead), this directory is rsynced
 into `includes.chroot/etc/calamares/`, the `calamares` package is added to
 the strain's package list, and a manual-launch desktop entry
-(`install-crucible-os.desktop`) is created.
+(`install-refract-os.desktop`) is created.
 
 **Live-session autostart**: a casper-bottom hook
-(`iso/casper-hooks/casper-bottom/25-crucible-install-icon`) drops that
+(`iso/casper-hooks/casper-bottom/25-refract-install-icon`) drops that
 desktop entry onto the live user's Desktop during boot — the documented
 mechanism real live-build+Calamares distros use, verified against
 [maui-linux/calamares-casper](https://github.com/maui-linux/calamares-casper)'s

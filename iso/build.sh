@@ -9,7 +9,7 @@
 # have already been checked separately with shellcheck). This script has
 # NOT been run yet — see README.md status section.
 #
-# Usage: ./build.sh [strain]   (run from this directory: crucible-os/iso/)
+# Usage: ./build.sh [strain]   (run from this directory: refract-os/iso/)
 #   strain is one of: workstation (default) | laptop | lowspec | server |
 #   handheld | cloud — see iso/strains/*.list.chroot and iso/strains/README.md.
 
@@ -54,7 +54,7 @@ cp "$STRAIN_FILE" "$PACKAGE_LISTS/strain-${STRAIN}.list.chroot"
 HEADLESS_STRAINS=(server cloud)
 rm -f "$PACKAGE_LISTS/calamares.list.chroot"
 rm -rf "$INCLUDES/etc/calamares"
-rm -f "$INCLUDES/usr/share/applications/install-crucible-os.desktop"
+rm -f "$INCLUDES/usr/share/applications/install-refract-os.desktop"
 rm -rf "$INCLUDES/usr/share/initramfs-tools/scripts/casper-bottom"
 if [[ ! " ${HEADLESS_STRAINS[*]} " == *" $STRAIN "* ]]; then
     echo -e "\033[36mWiring in Calamares (installer config, untested -- see iso/calamares/README.md)...\033[0m"
@@ -62,10 +62,10 @@ if [[ ! " ${HEADLESS_STRAINS[*]} " == *" $STRAIN "* ]]; then
     mkdir -p "$INCLUDES/etc/calamares"
     rsync -a --delete "$REPO_ROOT/iso/calamares/" "$INCLUDES/etc/calamares/" --exclude README.md
     mkdir -p "$INCLUDES/usr/share/applications"
-    cat > "$INCLUDES/usr/share/applications/install-crucible-os.desktop" <<EOF
+    cat > "$INCLUDES/usr/share/applications/install-refract-os.desktop" <<EOF
 [Desktop Entry]
 Type=Application
-Name=Install Crucible OS
+Name=Install Refract OS
 Exec=calamares
 Icon=system-software-install
 Terminal=false
@@ -79,9 +79,9 @@ EOF
     # forces an update-initramfs run so this plain dropped-in file (not a
     # .deb, so no dpkg trigger) actually gets embedded into the live initrd.
     mkdir -p "$INCLUDES/usr/share/initramfs-tools/scripts/casper-bottom"
-    cp "$REPO_ROOT/iso/casper-hooks/casper-bottom/25-crucible-install-icon" \
+    cp "$REPO_ROOT/iso/casper-hooks/casper-bottom/25-refract-install-icon" \
         "$INCLUDES/usr/share/initramfs-tools/scripts/casper-bottom/"
-    chmod +x "$INCLUDES/usr/share/initramfs-tools/scripts/casper-bottom/25-crucible-install-icon"
+    chmod +x "$INCLUDES/usr/share/initramfs-tools/scripts/casper-bottom/25-refract-install-icon"
 fi
 
 echo -e "\033[36mCopying repo scripts into the image (opt/distro/, /usr/local/bin)...\033[0m"
@@ -111,12 +111,12 @@ done
 find "$INCLUDES/opt/distro" -type f \( -name "*.sh" -o -name "distro-*" \) -exec chmod +x {} +
 
 # ---------------------------------------------------------------------------
-# OS IDENTITY — make it boot AS Crucible OS, not stock Ubuntu. Crucible OS is
+# OS IDENTITY — make it boot AS Refract OS, not stock Ubuntu. Refract OS is
 # Ubuntu-BASED (kernel + packages are Ubuntu's, ID_LIKE=ubuntu so apt/PPA logic
 # keeps working) but everything the user SEES is rebranded: os-release, boot
 # splash, wallpaper, hostname, terminal fetch.
 # ---------------------------------------------------------------------------
-echo -e "\033[36mBaking in Crucible OS identity...\033[0m"
+echo -e "\033[36mBaking in Refract OS identity...\033[0m"
 VERSION_NUM="1.0"; VERSION_CODENAME="forge"
 # Per-strain VARIANT label (capitalize first letter).
 VARIANT_LABEL="$(printf '%s' "$STRAIN" | sed 's/^./\U&/')"
@@ -124,67 +124,70 @@ VARIANT_LABEL="$(printf '%s' "$STRAIN" | sed 's/^./\U&/')"
 mkdir -p "$INCLUDES/etc" "$INCLUDES/usr/lib"
 _osrelease() {
 cat <<EOF
-NAME="Crucible OS"
-PRETTY_NAME="Crucible OS ${VERSION_NUM} (${VARIANT_LABEL})"
-ID=crucible
+NAME="Refract OS"
+PRETTY_NAME="Refract OS ${VERSION_NUM} (${VARIANT_LABEL})"
+ID=refract
 ID_LIKE="ubuntu debian"
 VERSION="${VERSION_NUM} (${VERSION_CODENAME^})"
 VERSION_ID="${VERSION_NUM}"
 VERSION_CODENAME=${VERSION_CODENAME}
 UBUNTU_CODENAME=noble
-HOME_URL="https://mr-pythoneer.github.io/crucible-os/"
-SUPPORT_URL="https://github.com/Mr-Pythoneer/crucible-os"
-BUG_REPORT_URL="https://github.com/Mr-Pythoneer/crucible-os/issues"
+HOME_URL="https://mr-pythoneer.github.io/refract-os/"
+SUPPORT_URL="https://github.com/Mr-Pythoneer/refract-os"
+BUG_REPORT_URL="https://github.com/Mr-Pythoneer/refract-os/issues"
 VARIANT="${VARIANT_LABEL}"
 VARIANT_ID=${STRAIN}
-LOGO=crucible
+LOGO=refract
 EOF
 }
 _osrelease > "$INCLUDES/etc/os-release"           # overrides base-files' symlink
 _osrelease > "$INCLUDES/usr/lib/os-release"
 cat > "$INCLUDES/etc/lsb-release" <<EOF
-DISTRIB_ID=Crucible
+DISTRIB_ID=Refract
 DISTRIB_RELEASE=${VERSION_NUM}
 DISTRIB_CODENAME=${VERSION_CODENAME}
-DISTRIB_DESCRIPTION="Crucible OS ${VERSION_NUM}"
+DISTRIB_DESCRIPTION="Refract OS ${VERSION_NUM}"
 EOF
-printf 'Crucible OS %s (%s) \\n \\l\n\n' "$VERSION_NUM" "$VARIANT_LABEL" > "$INCLUDES/etc/issue"
-printf 'Crucible OS %s\n' "$VERSION_NUM" > "$INCLUDES/etc/issue.net"
+printf 'Refract OS %s (%s) \\n \\l\n\n' "$VERSION_NUM" "$VARIANT_LABEL" > "$INCLUDES/etc/issue"
+printf 'Refract OS %s\n' "$VERSION_NUM" > "$INCLUDES/etc/issue.net"
 # Default hostname + matching hosts entry.
-echo "crucible" > "$INCLUDES/etc/hostname"
-printf '127.0.0.1\tlocalhost\n127.0.1.1\tcrucible\n' > "$INCLUDES/etc/hosts"
+echo "refract" > "$INCLUDES/etc/hostname"
+printf '127.0.0.1\tlocalhost\n127.0.1.1\trefract\n' > "$INCLUDES/etc/hosts"
 
 # Wallpaper + logos into the image.
-mkdir -p "$INCLUDES/usr/share/backgrounds/crucible" "$INCLUDES/usr/share/crucible"
+mkdir -p "$INCLUDES/usr/share/backgrounds/refract" "$INCLUDES/usr/share/refract"
 # The full per-mode wallpaper set (base/gaming/ai/server/creative/normal) —
 # distro-modectl swaps between them on `switch <mode>`.
-cp "$REPO_ROOT"/branding/out/wallpapers/*.png "$INCLUDES/usr/share/backgrounds/crucible/"
-cp "$REPO_ROOT/branding/out/wallpapers/base.png" "$INCLUDES/usr/share/backgrounds/crucible-os.png"  # GNOME default (login/base)
-cp "$REPO_ROOT/branding/out/logo-clean.png" "$INCLUDES/usr/share/crucible/logo.png"
-cp "$REPO_ROOT/branding/out/logo-small.png" "$INCLUDES/usr/share/crucible/logo-small.png"
+cp "$REPO_ROOT"/branding/out/wallpapers/*.png "$INCLUDES/usr/share/backgrounds/refract/"
+cp "$REPO_ROOT/branding/out/wallpapers/base.png" "$INCLUDES/usr/share/backgrounds/refract-os.png"  # GNOME default (login/base)
+cp "$REPO_ROOT/branding/out/logo-clean.png" "$INCLUDES/usr/share/refract/logo.png"
+cp "$REPO_ROOT/branding/out/logo-small.png" "$INCLUDES/usr/share/refract/logo-small.png"
+# The SVG source too — the identity hook copies it over any start-here.svg /
+# ubuntu-logo.svg (a PNG written into a .svg filename renders blank).
+cp "$REPO_ROOT/branding/src/logo.svg" "$INCLUDES/usr/share/refract/logo.svg"
 
 # Plymouth boot splash (theme + its logo).
-mkdir -p "$INCLUDES/usr/share/plymouth/themes/crucible"
-cp "$REPO_ROOT/iso/branding/plymouth/crucible/crucible.plymouth" "$INCLUDES/usr/share/plymouth/themes/crucible/"
-cp "$REPO_ROOT/iso/branding/plymouth/crucible/crucible.script"   "$INCLUDES/usr/share/plymouth/themes/crucible/"
-cp "$REPO_ROOT/branding/out/logo-clean.png" "$INCLUDES/usr/share/plymouth/themes/crucible/logo.png"
+mkdir -p "$INCLUDES/usr/share/plymouth/themes/refract"
+cp "$REPO_ROOT/iso/branding/plymouth/refract/refract.plymouth" "$INCLUDES/usr/share/plymouth/themes/refract/"
+cp "$REPO_ROOT/iso/branding/plymouth/refract/refract.script"   "$INCLUDES/usr/share/plymouth/themes/refract/"
+cp "$REPO_ROOT/branding/out/logo-clean.png" "$INCLUDES/usr/share/plymouth/themes/refract/logo.png"
 
 # GNOME default wallpaper + dark theme via a glib SCHEMA OVERRIDE — the reliable
 # mechanism (99_ sorts after Ubuntu's own 10_ override, so ours wins); compiled
-# by the 0200-crucible-identity chroot hook. Harmless on non-GNOME strains.
+# by the 0200-refract-identity chroot hook. Harmless on non-GNOME strains.
 mkdir -p "$INCLUDES/usr/share/glib-2.0/schemas"
-cp "$REPO_ROOT/iso/branding/glib/99_crucible.gschema.override" "$INCLUDES/usr/share/glib-2.0/schemas/99_crucible.gschema.override"
+cp "$REPO_ROOT/iso/branding/glib/99_refract.gschema.override" "$INCLUDES/usr/share/glib-2.0/schemas/99_refract.gschema.override"
 # dconf db for favorites (belt-and-suspenders alongside the schema override).
 mkdir -p "$INCLUDES/etc/dconf/db/local.d" "$INCLUDES/etc/dconf/profile"
-cp "$REPO_ROOT/iso/branding/dconf/local.d/00-crucible" "$INCLUDES/etc/dconf/db/local.d/00-crucible"
+cp "$REPO_ROOT/iso/branding/dconf/local.d/00-refract" "$INCLUDES/etc/dconf/db/local.d/00-refract"
 cp "$REPO_ROOT/iso/branding/dconf/profile/user"        "$INCLUDES/etc/dconf/profile/user"
-# GDM greeter branding (crucible logo + background on the login screen). The
+# GDM greeter branding (refract logo + background on the login screen). The
 # gdm dconf profile ships with gdm3; the hook compiles this db.
 mkdir -p "$INCLUDES/etc/dconf/db/gdm.d"
-cp "$REPO_ROOT/iso/branding/dconf/gdm.d/01-crucible" "$INCLUDES/etc/dconf/db/gdm.d/01-crucible"
+cp "$REPO_ROOT/iso/branding/dconf/gdm.d/01-refract" "$INCLUDES/etc/dconf/db/gdm.d/01-refract"
 
 # The identity package list (plymouth-themes/fastfetch/dconf-cli) and the
-# 0200-crucible-identity chroot hook are committed source files under
+# 0200-refract-identity chroot hook are committed source files under
 # config/package-lists/ and config/hooks/live/ — nothing to generate here.
 
 # Neutralize the old fork's mode-ubuntu gfxboot machinery. Two unconditional
@@ -231,10 +234,10 @@ lb config \
     --archive-areas "main restricted universe multiverse" \
     --debian-installer "$DI_OFF" \
     --syslinux-theme live-build \
-    --iso-application "Crucible OS ($STRAIN)" \
-    --iso-volume "CRUCIBLEOS"
+    --iso-application "Refract OS ($STRAIN)" \
+    --iso-volume "REFRACTOS"
 # --iso-volume deliberately does NOT vary by strain: ISO9660 volume labels
-# have an 11-character limit and "CRUCIBLEOS-LOWSPEC" etc. would blow past
+# have an 11-character limit and "REFRACTOS-LOWSPEC" etc. would blow past
 # it. --iso-application has no such constraint and is where the strain
 # name actually shows up (e.g. in a VM's drive label).
 
@@ -245,7 +248,7 @@ lb build
 # binary.hybrid.iso / binary.iso (source-verified in its lb_binary_iso);
 # Debian's modern live-build writes live-image-amd64.hybrid.iso. The first
 # successful build (run 28568346976) produced binary.hybrid.iso.
-RENAMED="crucible-os-${STRAIN}.iso"
+RENAMED="refract-os-${STRAIN}.iso"
 OUT=""
 for cand in binary.hybrid.iso live-image-amd64.hybrid.iso binary.iso; do
     if [ -f "$cand" ]; then OUT="$cand"; break; fi

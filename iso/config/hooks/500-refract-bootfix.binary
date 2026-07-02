@@ -31,7 +31,7 @@ elif [ -d casper ] || [ -d ../chroot ]; then
     B="."                                     # cwd = binary/
     ROOTS="../chroot/chroot ../chroot"
 else
-    echo "crucible-bootfix: unrecognized cwd '$(pwd)' — expected the live-build root or binary/." >&2
+    echo "refract-bootfix: unrecognized cwd '$(pwd)' — expected the live-build root or binary/." >&2
     exit 1
 fi
 
@@ -59,8 +59,8 @@ for root in $ROOTS; do
     fi
 done
 if [ -z "$found" ]; then
-    echo "crucible-bootfix: isolinux.bin not found under: $ROOTS — is 'isolinux' in package-lists/bootloader.list.chroot?" >&2
+    echo "refract-bootfix: isolinux.bin not found under: $ROOTS — is 'isolinux' in package-lists/bootloader.list.chroot?" >&2
     exit 1
 fi
 
-echo "crucible-bootfix: kernels renamed, isolinux.bin + ldlinux.c32 staged (from $found)."
+echo "refract-bootfix: kernels renamed, isolinux.bin + ldlinux.c32 staged (from $found)."

@@ -48,11 +48,11 @@ rm -rf "$symdir"
 aid="$(new_stubdir)"; cfg="$aid/cfg"
 stub "$aid" id 'if [ "$1" = "-u" ]; then echo 1000; else exit 0; fi'
 stub "$aid" sudo 'echo "REEXEC"; exit 0'
-stub "$aid" distro-ai-detect-tier 'mkdir -p "$XDG_CONFIG_HOME/crucible-ai"; echo ran >> "$XDG_CONFIG_HOME/detect-ran.log"; echo ultra > "$XDG_CONFIG_HOME/crucible-ai/tier"; exit 0'
+stub "$aid" distro-ai-detect-tier 'mkdir -p "$XDG_CONFIG_HOME/refract-ai"; echo ran >> "$XDG_CONFIG_HOME/detect-ran.log"; echo ultra > "$XDG_CONFIG_HOME/refract-ai/tier"; exit 0'
 stub "$aid" distro-ai-model 'echo "AIMODEL $*"; exit 0'
 out="$(PATH="$aid:$PATH" HOME="$aid" XDG_CONFIG_HOME="$cfg" "$MODECTL" switch ai --yes </dev/null 2>&1)"
 assert_contains "switch ai loads the use-case model" "$out" "AIMODEL use coding"
-if [ -f "$cfg/crucible-ai/tier" ]; then pass "switch ai auto-detected the tier (tier file written)"; else fail "switch ai did not auto-detect the tier"; fi
+if [ -f "$cfg/refract-ai/tier" ]; then pass "switch ai auto-detected the tier (tier file written)"; else fail "switch ai did not auto-detect the tier"; fi
 assert_eq "detect-tier ran once on first entry" "1" "$(wc -l < "$cfg/detect-ran.log" 2>/dev/null | tr -d ' ')"
 # second entry: tier now recorded -> detect-tier NOT re-run, model still loads
 out="$(PATH="$aid:$PATH" HOME="$aid" XDG_CONFIG_HOME="$cfg" "$MODECTL" switch ai --yes </dev/null 2>&1)"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
 # Runs every mode's verify-*.sh sanity check plus the driver and mode-switcher
-# checks, in one pass, on an INSTALLED Crucible OS system (after the relevant
+# checks, in one pass, on an INSTALLED Refract OS system (after the relevant
 # setup scripts have run). Unlike preflight.sh (which checks a BUILD HOST before
 # building), this checks a RUNNING system's installed bundles.
 #

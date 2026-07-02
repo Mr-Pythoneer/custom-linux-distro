@@ -1,7 +1,7 @@
 # Casper live-session autostart hook
 
-`casper-bottom/25-crucible-install-icon` drops the "Install Crucible OS"
-desktop entry (`iso/build.sh`'s `install-crucible-os.desktop`) onto the live
+`casper-bottom/25-refract-install-icon` drops the "Install Refract OS"
+desktop entry (`iso/build.sh`'s `install-refract-os.desktop`) onto the live
 session user's Desktop during boot, for GUI strains only. `iso/build.sh`
 copies this file into `config/includes.chroot/usr/share/initramfs-tools/scripts/casper-bottom/`
 at build time (it lives here, not directly under `includes.chroot/`, because
