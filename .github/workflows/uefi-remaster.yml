@@ -81,9 +81,12 @@ jobs:
             --modules="part_gpt part_msdos fat iso9660 normal linux search configfile echo all_video gfxterm test" \
             "boot/grub/grub.cfg=grub-embed.cfg"
 
-          # FAT El Torito EFI boot image containing /EFI/BOOT/BOOTX64.EFI.
-          dd if=/dev/zero of=efiboot.img bs=1M count=8
-          mkfs.vfat -F 16 efiboot.img
+          # FAT El Torito EFI boot image containing /EFI/BOOT/BOOTX64.EFI. Size it
+          # to the actual EFI binary + slack and let mkfs.vfat pick the FAT type
+          # (a fixed 8 MB image is too small for a forced FAT16).
+          efimb=$(( $(stat -c%s bootx64.efi) / 1048576 + 4 ))
+          dd if=/dev/zero of=efiboot.img bs=1M count="$efimb"
+          mkfs.vfat efiboot.img
           mmd -i efiboot.img ::/EFI ::/EFI/BOOT
           mcopy -i efiboot.img bootx64.efi ::/EFI/BOOT/BOOTX64.EFI
           mkdir -p tree/EFI/boot
