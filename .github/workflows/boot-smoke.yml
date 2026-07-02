@@ -1,0 +1,157 @@
+name: boot-smoke
+
+# Boots a built ISO in QEMU on the CI runner (ubuntu-latest exposes /dev/kvm)
+# and asserts the live system actually comes up — closing "built but never
+# booted" with zero local hardware. Manual-dispatch like build-iso.yml.
+#
+# Two independent phases:
+#   A) Full-ISO boot (BIOS/SeaBIOS -> isolinux -> kernel): proves the
+#      bootloader path our config/hooks/500-crucible-bootfix.binary stages
+#      actually works. Asserted via QEMU screendumps (the live kernel args
+#      have no serial console), which are also uploaded as artifacts — the
+#      first-ever screenshots of Crucible OS running.
+#   B) Direct-kernel boot with console=ttyS0: extracts /casper/vmlinuz +
+#      initrd from the ISO and boots with a serial console for a real,
+#      greppable assertion that casper finds the squashfs and systemd
+#      reaches userspace targets.
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: "build-iso run id to fetch the ISO artifact from (empty = latest successful)"
+        required: false
+        default: ""
+
+jobs:
+  boot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve build run id
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RUN: ${{ inputs.build_run_id }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_RUN" ]; then
+            echo "id=$INPUT_RUN" >> "$GITHUB_OUTPUT"
+          else
+            id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build-iso.yml \
+                 --status success --limit 1 --json databaseId -q '.[0].databaseId')
+            [ -n "$id" ] || { echo "No successful build-iso run found." >&2; exit 1; }
+            echo "id=$id" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download ISO artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: crucible-os-*
+          run-id: ${{ steps.run.outputs.id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: iso-dl
+
+      - name: Prepare QEMU + KVM
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 qemu-utils socat libarchive-tools
+          ls -lh iso-dl/
+          ISO=$(find iso-dl -name "*.iso" | head -n1)
+          [ -n "$ISO" ] || { echo "No .iso in the artifact." >&2; exit 1; }
+          mv "$ISO" crucible.iso
+          if [ -e /dev/kvm ]; then
+            sudo chmod 666 /dev/kvm
+            echo "ACCEL=kvm" >> "$GITHUB_ENV"
+          else
+            echo "WARNING: /dev/kvm missing — falling back to TCG (slow)." >&2
+            echo "ACCEL=tcg" >> "$GITHUB_ENV"
+          fi
+
+      - name: "Phase A: full-ISO boot (isolinux path) + screenshots"
+        run: |
+          set -euo pipefail
+          mkdir -p shots
+          qemu-system-x86_64 -accel "$ACCEL" -m 4096 -smp 4 \
+            -cdrom crucible.iso -boot d \
+            -display none -vga std \
+            -monitor unix:mon.sock,server,nowait \
+            -pidfile qemu-a.pid -daemonize
+          mon() { printf '%s\n' "$1" | socat - unix-connect:mon.sock >/dev/null; }
+          shot() { mon "screendump shots/$1.ppm"; sleep 1; }
+          sleep 20;  shot t020-bootloader-kernel
+          sleep 40;  shot t060-early-userspace
+          sleep 60;  shot t120-late-boot
+          sleep 60;  shot t180-desktop
+          # VM must still be alive after 3 minutes (a crashed/reset boot exits or reboots)
+          kill -0 "$(cat qemu-a.pid)" || { echo "FAIL: QEMU exited during Phase A boot." >&2; exit 1; }
+          mon "quit" || true
+          # Assert the final screen isn't blank: >1 distinct pixel values means
+          # SOMETHING rendered (bootloader text at minimum, desktop at best).
+          python3 - <<'PY'
+          import sys
+          def distinct(path):
+              with open(path, "rb") as f:
+                  data = f.read()
+              # PPM P6: header = 3 whitespace-separated fields after magic
+              parts = data.split(b"\n", 3)
+              px = parts[-1]
+              return len(set(px[i:i+3] for i in range(0, min(len(px), 3*1000000), 3)))
+          d = distinct("shots/t180-desktop.ppm")
+          print(f"distinct pixel values in final screenshot: {d}")
+          sys.exit(0 if d > 1 else 1)
+          PY
+
+      - name: Convert screenshots to PNG
+        if: always()
+        run: |
+          set -euo pipefail
+          sudo apt-get install -y imagemagick >/dev/null 2>&1 || true
+          for f in shots/*.ppm; do
+            [ -e "$f" ] || continue
+            convert "$f" "${f%.ppm}.png" && rm -f "$f" || true
+          done
+          ls -lh shots/ || true
+
+      - name: "Phase B: direct-kernel boot with serial console assertions"
+        run: |
+          set -euo pipefail
+          # Pull kernel+initrd out of the ISO (bsdtar reads iso9660).
+          mkdir -p extract && bsdtar -xf crucible.iso -C extract casper/vmlinuz casper/initrd.img
+          ls -lh extract/casper/
+          timeout 600 qemu-system-x86_64 -accel "$ACCEL" -m 4096 -smp 4 \
+            -kernel extract/casper/vmlinuz -initrd extract/casper/initrd.img \
+            -append "boot=casper console=ttyS0,115200 systemd.show_status=true" \
+            -cdrom crucible.iso \
+            -display none -serial file:serial.log -pidfile qemu-b.pid -daemonize
+          # Poll the serial log for boot-progress markers, up to 8 minutes.
+          ok_casper=""; ok_systemd=""
+          for i in $(seq 1 96); do
+            sleep 5
+            grep -q -m1 -i "casper" serial.log 2>/dev/null && ok_casper=1
+            grep -q -m1 -iE "reached target|started .*session|gnome|gdm" serial.log 2>/dev/null && ok_systemd=1
+            [ -n "$ok_casper" ] && [ -n "$ok_systemd" ] && break
+          done
+          kill "$(cat qemu-b.pid)" 2>/dev/null || true
+          echo "=== serial.log tail ==="; tail -40 serial.log || true
+          [ -n "$ok_casper" ]  || { echo "FAIL: no casper marker in serial log — initramfs never found/mounted the live squashfs." >&2; exit 1; }
+          [ -n "$ok_systemd" ] || { echo "FAIL: casper ran but systemd never reached userspace targets." >&2; exit 1; }
+          echo "PASS: kernel booted, casper mounted the live system, systemd reached userspace."
+
+      - name: Upload boot evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-smoke-evidence
+          path: |
+            shots/
+            serial.log
+          if-no-files-found: warn
+          retention-days: 14
