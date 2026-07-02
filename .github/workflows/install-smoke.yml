@@ -1,0 +1,252 @@
+name: install-smoke
+
+# Tests the Calamares installer without any hardware. Two jobs:
+#
+#   inspect  — mount the live squashfs (the exact filesystem unpackfs copies to
+#              the target) on the runner and assert the installer is correctly
+#              assembled: Calamares present, every shipped Calamares config
+#              present, the unpackfs SOURCE path matches where the squashfs
+#              actually lives on the medium, and the distro CLIs run in the real
+#              image userland (overlay + chroot). Deterministic.
+#
+#   install  — boot the live ISO in QEMU with a blank target disk, drive
+#              Calamares over VNC (vncdotool on the runner — no in-guest tooling
+#              needed) through an erase-disk install, then boot the INSTALLED
+#              disk with no ISO attached and assert it reaches userspace. This
+#              is the first end-to-end exercise of partition -> unpackfs -> grub.
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_run_id:
+        description: "build-iso run id (empty = latest successful)"
+        required: false
+        default: ""
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve build run id
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RUN: ${{ inputs.build_run_id }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_RUN" ]; then id="$INPUT_RUN"
+          else id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build-iso.yml --status success --limit 1 --json databaseId -q '.[0].databaseId'); fi
+          [ -n "$id" ] || { echo "No successful build-iso run." >&2; exit 1; }
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Download ISO artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: crucible-os-*
+          run-id: ${{ steps.run.outputs.id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: iso-dl
+
+      - name: Mount the live squashfs
+        run: |
+          set -euo pipefail
+          sudo apt-get update && sudo apt-get install -y libarchive-tools squashfs-tools
+          ISO=$(find iso-dl -name "*.iso" | head -n1); [ -n "$ISO" ] || { echo "no iso" >&2; exit 1; }
+          mkdir -p x
+          bsdtar -xf "$ISO" -C x casper/filesystem.squashfs
+          ls -lh x/casper/filesystem.squashfs
+          sudo mkdir -p /mnt/sq
+          sudo mount -t squashfs -o loop,ro x/casper/filesystem.squashfs /mnt/sq
+          echo "SQUASHFS_OK=1" >> "$GITHUB_ENV"
+
+      - name: Assert installer is correctly assembled
+        run: |
+          set -euo pipefail
+          fail=0
+          chk() { if eval "$2"; then echo "ok   $1"; else echo "FAIL $1"; fail=1; fi; }
+
+          chk "Calamares binary is in the image"            '[ -x /mnt/sq/usr/bin/calamares ]'
+          chk "settings.conf present"                       '[ -f /mnt/sq/etc/calamares/settings.conf ]'
+          chk "modules/unpackfs.conf present"               '[ -f /mnt/sq/etc/calamares/modules/unpackfs.conf ]'
+          chk "modules/partition.conf present"              '[ -f /mnt/sq/etc/calamares/modules/partition.conf ]'
+          chk "modules/users.conf present"                  '[ -f /mnt/sq/etc/calamares/modules/users.conf ]'
+          chk "branding present"                            '[ -d /mnt/sq/etc/calamares/branding/crucibleos ]'
+          chk "install .desktop launcher present"           '[ -f /mnt/sq/usr/share/applications/install-crucible-os.desktop ]'
+          chk "distro-modectl symlink in PATH"              '[ -L /mnt/sq/usr/local/bin/distro-modectl ]'
+          chk "distro scripts rsynced into /opt/distro"     '[ -f /mnt/sq/opt/distro/modes/modectl/distro-modectl ]'
+
+          # The unpackfs SOURCE must be exactly where the squashfs lives on the
+          # booted medium. casper mounts the ISO at /cdrom and the squashfs is
+          # casper/filesystem.squashfs — that's what unpackfs.conf must name.
+          src=$(python3 -c "import yaml;print(yaml.safe_load(open('/mnt/sq/etc/calamares/modules/unpackfs.conf'))['unpack'][0]['source'])")
+          echo "unpackfs source = $src"
+          chk "unpackfs source is /cdrom/casper/filesystem.squashfs" '[ "$src" = "/cdrom/casper/filesystem.squashfs" ]'
+
+          # Every module named in the exec/show sequence that we ship a conf for
+          # must have that conf (builtin modules like mount/fstab/grubcfg don't).
+          python3 - <<'PY'
+          import yaml, os, sys
+          s = yaml.safe_load(open('/mnt/sq/etc/calamares/settings.conf'))
+          seq = []
+          for phase in s['sequence']:
+              for k, v in phase.items():
+                  seq += v
+          shipped = {f[:-5] for f in os.listdir('/mnt/sq/etc/calamares/modules') if f.endswith('.conf')}
+          missing = [m for m in shipped if m not in seq]
+          print("sequence:", seq)
+          print("shipped module configs:", sorted(shipped))
+          # every shipped config should actually be referenced by the sequence
+          sys.exit(1 if missing else 0)
+          PY
+          chk "every shipped module conf is used by the sequence" 'true'
+
+          [ "$fail" -eq 0 ] || { echo "installer-assembly assertions FAILED" >&2; exit 1; }
+
+      - name: Run the distro CLIs in the real image userland (overlay + chroot)
+        run: |
+          set -euo pipefail
+          # Make the read-only squashfs writable via overlayfs so we can drop the
+          # test suite in and run it against the ACTUAL shipped Ubuntu userland.
+          mkdir -p up work root
+          sudo mount -t overlay overlay -o lowerdir=/mnt/sq,upperdir="$PWD/up",workdir="$PWD/work" "$PWD/root"
+          sudo mkdir -p root/opt/testkit
+          sudo cp -a tests modes drivers root/opt/testkit/
+          for fs in proc sys dev; do sudo mount --bind /$fs "root/$fs"; done
+          echo "--- distro-modectl status (in image) ---"
+          sudo chroot root /usr/local/bin/distro-modectl status
+          echo "--- distro-ai-detect-tier --print (in image, no GPU -> cpu) ---"
+          sudo chroot root /usr/local/bin/distro-ai-detect-tier --print | sed 's/\x1b\[[0-9;]*m//g' | grep -E "Tier:|GPU:"
+          echo "--- full hermetic test suite on the real image (bash5/GNU) ---"
+          sudo chroot root bash /opt/testkit/tests/run.sh
+          for fs in proc sys dev; do sudo umount "root/$fs" || true; done
+          sudo umount root || true
+
+  install:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve build run id
+        id: run
+        env:
+          GH_TOKEN: ${{ github.token }}
+          INPUT_RUN: ${{ inputs.build_run_id }}
+        run: |
+          set -euo pipefail
+          if [ -n "$INPUT_RUN" ]; then id="$INPUT_RUN"
+          else id=$(gh run list --repo "$GITHUB_REPOSITORY" --workflow build-iso.yml --status success --limit 1 --json databaseId -q '.[0].databaseId'); fi
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Download ISO artifact
+        uses: actions/download-artifact@v4
+        with:
+          pattern: crucible-os-*
+          run-id: ${{ steps.run.outputs.id }}
+          github-token: ${{ github.token }}
+          merge-multiple: true
+          path: iso-dl
+
+      - name: Prepare QEMU + vncdotool
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y qemu-system-x86 qemu-utils socat python3-pip
+          pipx install vncdotool 2>/dev/null || pip install --user vncdotool
+          ISO=$(find iso-dl -name "*.iso" | head -n1); mv "$ISO" crucible.iso
+          [ -e /dev/kvm ] && sudo chmod 666 /dev/kvm && echo "ACCEL=kvm" >> "$GITHUB_ENV" || echo "ACCEL=tcg" >> "$GITHUB_ENV"
+          qemu-img create -f qcow2 target.qcow2 20G
+
+      - name: "Drive Calamares over VNC, install to the blank disk"
+        run: |
+          set -euo pipefail
+          export PATH="$HOME/.local/bin:$PATH"
+          mkdir -p shots
+          qemu-system-x86_64 -accel "$ACCEL" -m 4096 -smp 4 \
+            -cdrom crucible.iso -boot d \
+            -drive file=target.qcow2,format=qcow2,if=virtio \
+            -display none -vga std -vnc :0 \
+            -monitor unix:mon.sock,server,nowait -pidfile qemu.pid -daemonize
+          mon() { printf '%s\n' "$1" | socat - unix-connect:mon.sock >/dev/null; }
+          shot() { mon "screendump $PWD/shots/$1.ppm"; }
+          vd() { vncdo -s localhost:0 "$@"; }
+
+          echo "Waiting for the live desktop (~3 min)..."
+          sleep 200
+          shot 00-desktop
+          # Launch Calamares from its desktop icon (top-left of the desktop grid).
+          # Two double-clicks at a couple of likely icon positions, then fall back
+          # to the app via keystroke isn't possible headless — rely on the icon.
+          vd move 60 90 click 1 pause 0.2 click 1 || true
+          sleep 8; shot 01-after-launch
+          # Calamares pages: on a blank disk the erase-disk flow is Next x3 ->
+          # (partition auto) Next -> users (type) -> Next -> Install. The Next
+          # button is the default; Enter advances. Give each page time to load.
+          for p in welcome locale keyboard; do vd key enter; sleep 6; done
+          shot 02-partition
+          vd key enter; sleep 6          # partition (erase disk default)
+          # users page: name -> tab tab fills username, then password x2
+          shot 03-users
+          vd type "tester" key tab key tab || true
+          vd type "crucible" key tab type "crucible" key tab || true
+          vd key enter; sleep 5          # -> summary
+          shot 04-summary
+          vd key enter                   # Install
+          echo "Installing (unpackfs copy + grub)... polling target disk growth"
+          # An erase-disk install writes several GB; poll qcow2 actual size as a
+          # progress proxy, up to 25 minutes.
+          prev=0
+          for i in $(seq 1 50); do
+            sleep 30
+            sz=$(qemu-img info --output=json target.qcow2 | python3 -c "import json,sys;print(json.load(sys.stdin)['actual-size'])")
+            echo "target actual-size: $sz"
+            [ "$i" -eq 10 ] && shot 05-installing
+            if [ "$sz" -gt 2000000000 ] && [ "$sz" -eq "$prev" ]; then echo "size stabilized >2GB — install likely done"; break; fi
+            prev="$sz"
+          done
+          shot 06-final
+          mon "quit" || true
+          sudo apt-get install -y imagemagick >/dev/null 2>&1 || true
+          for f in shots/*.ppm; do convert "$f" "${f%.ppm}.png" 2>/dev/null && rm -f "$f" || true; done
+          # Sanity: the target must have received real data.
+          final=$(qemu-img info --output=json target.qcow2 | python3 -c "import json,sys;print(json.load(sys.stdin)['actual-size'])")
+          echo "final target actual-size: $final"
+          [ "$final" -gt 2000000000 ] || { echo "FAIL: target disk got <2GB — install did not copy the system." >&2; exit 1; }
+
+      - name: "Boot the INSTALLED disk (no ISO) and assert userspace"
+        run: |
+          set -euo pipefail
+          timeout 600 qemu-system-x86_64 -accel "$ACCEL" -m 4096 -smp 4 \
+            -drive file=target.qcow2,format=qcow2,if=virtio \
+            -display none -serial "file:$PWD/installed-serial.log" \
+            -pidfile "$PWD/qemu2.pid" -daemonize
+          ok=""
+          for i in $(seq 1 80); do
+            sleep 5
+            grep -qiE "reached target|systemd.*running|login:|gdm|gnome" installed-serial.log 2>/dev/null && ok=1 && break
+          done
+          kill "$(cat qemu2.pid)" 2>/dev/null || true
+          echo "=== installed-disk serial tail ==="; tail -40 installed-serial.log || true
+          [ -n "$ok" ] || { echo "FAIL: installed disk did not reach userspace — grub/unpackfs/fstab problem." >&2; exit 1; }
+          echo "PASS: the installed disk boots to userspace with no ISO attached."
+
+      - name: Upload install evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: install-smoke-evidence
+          path: |
+            shots/
+            installed-serial.log
+          if-no-files-found: warn
+          retention-days: 14
