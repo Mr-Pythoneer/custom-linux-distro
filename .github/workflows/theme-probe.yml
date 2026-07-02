@@ -1,7 +1,7 @@
 name: theme-probe
-# Throwaway diagnostic (v2): verify the FIXED install paths before a full ISO
-# build — WhiteSur to a temp dir then copy, and blur-my-shell built from source
-# (it is NOT in Ubuntu apt). Delete once the macOS-look hook is fixed.
+# Throwaway diagnostic (v3): the pinned-old WhiteSur commit's install.sh exits 1
+# right after its banner. Try LATEST WhiteSur with a bash -x trace to find the
+# failing command, and build blur-my-shell from source (it is NOT in apt).
 on:
   workflow_dispatch:
 
@@ -12,32 +12,28 @@ jobs:
     steps:
       - name: Deps
         run: |
-          set -x
           sudo apt-get update
           sudo apt-get install -y sassc libglib2.0-dev-bin libxml2-utils git \
             gnome-themes-extra make gettext
 
-      - name: WhiteSur GTK — temp install then copy to /usr/share/themes
+      - name: WhiteSur GTK latest — trace the failing command
+        continue-on-error: true
         run: |
-          set -xe
-          git init -q ws && git -C ws remote add origin https://github.com/vinceliuice/WhiteSur-gtk-theme.git
-          git -C ws fetch -q --depth 1 origin a83f467e4c16b1ed1c960f3d89e2472d9639477c
-          git -C ws checkout -q FETCH_HEAD
+          git clone --depth 1 https://github.com/vinceliuice/WhiteSur-gtk-theme.git ws
+          echo "WS_HEAD=$(git -C ws rev-parse HEAD)"
           mkdir -p /tmp/ws-out
-          ws/install.sh -d /tmp/ws-out          # NO -c flags, NOT a system dir
-          echo "=== built theme dirs ==="; ls /tmp/ws-out
-          sudo cp -a /tmp/ws-out/. /usr/share/themes/
-          echo "=== WhiteSur-Dark present system-wide? ==="
-          ls -d /usr/share/themes/WhiteSur-Dark && echo "WHITESUR_OK" || echo "WHITESUR_MISSING"
+          echo "=== bash -x trace (last 40 lines before it stops) ==="
+          bash -x ws/install.sh -d /tmp/ws-out 2>&1 | tail -40 || true
+          echo "=== result ==="
+          ls -d /tmp/ws-out/WhiteSur-Dark 2>/dev/null && echo "WHITESUR_OK" || echo "WHITESUR_MISSING"
 
-      - name: blur-my-shell — build from source (not in apt) + locate extension
+      - name: blur-my-shell — build from source + locate extension
+        continue-on-error: true
         run: |
-          set -xe
-          git init -q bms && git -C bms remote add origin https://github.com/aunetx/blur-my-shell.git
-          git -C bms fetch -q --depth 1 origin main
-          git -C bms checkout -q FETCH_HEAD
-          echo "PINNED_HEAD=$(git -C bms rev-parse HEAD)"
-          make -C bms build 2>&1 | tail -20 || make -C bms 2>&1 | tail -20 || true
-          echo "=== where is the built extension (metadata.json)? ==="
+          git clone --depth 1 https://github.com/aunetx/blur-my-shell.git bms
+          echo "BMS_HEAD=$(git -C bms rev-parse HEAD)"
+          make -C bms build 2>&1 | tail -15 || make -C bms 2>&1 | tail -15 || true
+          echo "=== metadata.json locations ==="
           find bms -name metadata.json -not -path '*/node_modules/*'
-          echo "=== uuid ==="; find bms -name metadata.json -exec grep -H uuid {} \; | head
+          echo "=== does _build exist? ==="
+          ls -la bms/_build 2>/dev/null | head || echo "no _build dir"
