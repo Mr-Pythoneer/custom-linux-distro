@@ -69,11 +69,11 @@ jobs:
           insmod all_video
           search --set=root --file /casper/vmlinuz
           menuentry "Refract OS (live)" {
-            linux /casper/vmlinuz boot=casper quiet splash ---
+            linux /casper/vmlinuz boot=casper quiet splash console=tty0 console=ttyS0,115200 ---
             initrd /casper/initrd.img
           }
           menuentry "Refract OS (safe graphics)" {
-            linux /casper/vmlinuz boot=casper nomodeset ---
+            linux /casper/vmlinuz boot=casper nomodeset console=tty0 console=ttyS0,115200 ---
             initrd /casper/initrd.img
           }
           EOF
@@ -128,18 +128,21 @@ jobs:
             -cdrom refract-uefi.iso -boot d \
             -display none -vga std -serial "file:$PWD/uefi-serial.log" \
             -monitor "unix:$PWD/mon.sock,server,nowait" -pidfile "$PWD/q.pid" -daemonize
+          set +e   # the detection loop must not abort on a non-matching grep
           shot() { printf 'screendump %s\n' "$PWD/shots/$1.ppm" | socat - "unix-connect:$PWD/mon.sock" >/dev/null 2>&1 || true; }
           ok=""
-          for i in $(seq 1 60); do
-            sleep 5
-            grep -qiE "reached target|systemd|casper|Welcome to Refract|GNOME|gdm|login:" uefi-serial.log 2>/dev/null && ok=1 && break
+          for i in $(seq 1 50); do
+            sleep 6
+            if grep -qiE "reached target|systemd\[1\]|casper|Welcome to Refract|GNOME|gdm|login:|Reached target" uefi-serial.log 2>/dev/null; then ok=1; fi
+            case "$i" in 15|25|35) shot "uefi-$i" ;; esac
+            [ -n "$ok" ] && [ "$i" -ge 30 ] && break   # matched AND gave the desktop time to draw
           done
-          shot uefi-desktop
-          echo "=== UEFI serial tail ==="; tail -30 uefi-serial.log || true
+          shot uefi-final
+          echo "=== UEFI serial tail ==="; tail -40 uefi-serial.log || true
           sudo apt-get install -y imagemagick >/dev/null 2>&1 || true
           for f in shots/*.ppm; do convert "$f" "${f%.ppm}.png" 2>/dev/null && rm -f "$f" || true; done
-          [ -n "$ok" ] || { echo "FAIL: ISO did not reach userspace under UEFI/OVMF." >&2; exit 1; }
-          echo "PASS: booted under real UEFI firmware (OVMF)."
+          [ -n "$ok" ] || { echo "FAIL: no userspace signal on serial under UEFI/OVMF (check the uploaded shots)." >&2; exit 1; }
+          echo "PASS: booted Refract under real UEFI firmware (OVMF)."
 
       - name: Upload hybrid ISO + evidence
         if: always()
